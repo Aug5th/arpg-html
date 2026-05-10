@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Xianxia RPG - Modular</title>
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+
+<body>
+    <div id="scene-main-menu" class="scene">
+        <div class="screen-overlay" style="background: rgba(0,10,20,0.9);">
+            <h1 class="game-title-main">TU TIÊN LỘ 2D</h1>
+            <div class="menu-btn-group">
+                <button class="btn main-btn"
+                    onclick="window.changeScene('scene-save-load'); window.updateSaveSlotsUI();">
+                    BẮT ĐẦU
+                </button>
+                <button class="btn main-btn" onclick="window.close()">THOÁT</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="scene-save-load" class="scene" style="display: none;">
+        <div class="screen-overlay" style="background: rgba(0,10,20,0.9);">
+            <h2 style="color: #00ffff; margin-bottom: 40px; font-size: 40px; text-shadow: 0 0 10px #00ffff;">CHỌN TIÊN
+                PHỦ (LƯU TRỮ)</h2>
+            <div class="save-slot-container" id="save-slots">
+            </div>
+            <button class="btn" style="margin-top: 50px; font-size: 16px;" onclick="changeScene('scene-main-menu')">QUAY
+                LẠI MENU</button>
+        </div>
+    </div>
+
+    <div id="scene-village" class="scene" style="display: none;">
+        <div id="village-tutorial"
+            style="display: none; position: absolute; top: 100px; left: 50%; transform: translateX(-50%); color: white; background: rgba(0,0,0,0.5); padding: 10px 20px; border-radius: 10px; pointer-events: none;">
+            <h3 style="margin: 0; color: #ffaa00;">TÂN THỦ THÔN</h3>
+            <p style="margin: 5px 0 0 0; font-size: 14px;">Hãy đi tìm một ông lão gần đây để nhận kỳ duyên</p>
+        </div>
+
+        <div id="npc-dialogue"
+            style="display: none; position: absolute; left: 50%; bottom: 15%; transform: translateX(-50%); background: rgba(0, 15, 30, 0.95); border: 2px solid #ffaa00; border-radius: 10px; padding: 20px; color: #fff; z-index: 100; text-align: center; min-width: 450px; box-shadow: 0 0 20px rgba(255, 170, 0, 0.3);">
+            <h3 style="color: #ffaa00; margin-top: 0; margin-bottom: 15px; text-transform: uppercase;">Vô Danh Lão Nhân
+            </h3>
+            <p style="font-size: 18px; font-style: italic; color: #00ffff;">"Đạo tâm đã định, há có thể quay đầu? Cứ
+                vững bước trên con đường tu tiên mà ngươi đã chọn đi!"</p>
+            <p style="font-size: 12px; color: #888; margin-bottom: 0; margin-top: 20px;">(Bấm [E] hoặc di chuyển để rời
+                đi)</p>
+        </div>
+
+        <div id="blacksmith-panel" class="screen-overlay"
+            style="display: none; z-index: 65; background: rgba(0, 0, 0, 0.9);">
+            <div
+                style="width: 700px; height: 500px; background: #0a1118; border: 2px solid #ffaa00; border-radius: 10px; display: flex; flex-direction: column; position: relative; box-sizing: border-box;">
+
+                <div
+                    style="display: flex; align-items: center; justify-content: center; position: relative; border-bottom: 1px solid #333; height: 65px;">
+                    <h2 style="color: #ffaa00; margin: 0; font-size: 24px; text-shadow: 0 0 10px #ffaa00;">
+                        🔨 LÒ RÈN - THIẾT TRÙY ĐẠI SƯ
+                    </h2>
+                    <button class="btn"
+                        style="position: absolute; right: 15px; top: 16px; padding: 5px 15px; font-size: 12px; border-color: #ff3333; color: #ff3333;"
+                        onclick="window.closeBlacksmith()">ĐÓNG [ESC]</button>
+                </div>
+
+                <div style="display: flex; flex: 1; overflow: hidden;">
+                    <div style="width: 45%; border-right: 1px solid #333; overflow-y: auto; padding: 10px; box-sizing: border-box;"
+                        id="craft-list">
+                    </div>
+
+                    <div style="width: 55%; padding: 20px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box;"
+                        id="craft-details">
+                        <div style="font-size: 48px; margin-bottom: 10px; text-shadow: 0 0 20px #fff;" id="craft-icon">❓
+                        </div>
+                        <h3 id="craft-name" style="color: #00ffff; margin: 0 0 10px 0; font-size: 20px;">Chọn trang bị
+                        </h3>
+                        <div id="craft-stats"
+                            style="color: #00ff00; font-size: 13px; margin-bottom: 20px; text-align: center; min-height: 20px;">
+                        </div>
+
+                        <div
+                            style="width: 100%; margin-bottom: 20px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px; box-sizing: border-box;">
+                            <h4
+                                style="color: #aaa; margin-top: 0; margin-bottom: 10px; border-bottom: 1px dashed #555; padding-bottom: 5px; font-size: 14px;">
+                                Yêu cầu nguyên liệu:</h4>
+                            <div id="craft-materials"
+                                style="display: flex; flex-direction: column; gap: 8px; font-size: 13px;">
+                            </div>
+                        </div>
+
+                        <button class="btn" id="btn-craft"
+                            style="margin-top: auto; width: 100%; font-size: 16px; padding: 10px; background: rgba(0, 255, 0, 0.1); border-color: #00ff00; color: #00ff00; opacity: 0.5; cursor: not-allowed;"
+                            onclick="window.doCraft()">CHẾ TẠO</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="teleport-map" class="screen-overlay" style="display: none; z-index: 60; background: rgba(0,0,0,0.9);">
+            <h2 style="color: #00ffff; text-shadow: 0 0 10px #00ffff;">TRẬN PHÁP DỊCH CHUYỂN</h2>
+            <p style="color: #aaa; font-size: 16px;">Hãy chọn nơi muốn đến</p>
+
+            <div class="class-container" style="gap: 20px;">
+                <div class="class-card" style="width: 200px; padding: 15px;" onclick="window.teleportTo('forest')">
+                    <div style="font-size: 40px;">🌳</div>
+                    <div class="class-title" style="font-size: 20px;">THANH DIỆP LÂM</div>
+                    <p style="font-size: 12px; color: #00ff00;">(Farm nguyên liệu)</p>
+                </div>
+
+                <div class="class-card" style="width: 200px; padding: 15px;" onclick="window.teleportTo('dungeon')">
+                    <div style="font-size: 40px;">👹</div>
+                    <div class="class-title" style="font-size: 20px;">MA TÔN VỰC</div>
+                    <p style="font-size: 12px; color: #ff3333;">(Cấp độ: 1-10)</p>
+                </div>
+
+                <div class="class-card" style="width: 200px; padding: 15px; opacity: 0.6; cursor: not-allowed;">
+                    <div style="font-size: 40px;">⚡</div>
+                    <div class="class-title" style="font-size: 20px;">LÔI VÂN QUẬT</div>
+                    <p style="font-size: 12px; color: #aaa;">(Yêu cầu: Trúc Cơ)</p>
+                </div>
+
+                <div class="class-card" style="width: 200px; padding: 15px; opacity: 0.6; cursor: not-allowed;">
+                    <div style="font-size: 40px;">🎍</div>
+                    <div class="class-title" style="font-size: 20px;">THÚY TRÚC LÂM</div>
+                    <p style="font-size: 12px; color: #aaa;">(Yêu cầu: Cấp 15)</p>
+                </div>
+
+                <div class="class-card" style="width: 200px; padding: 15px; opacity: 0.6; cursor: not-allowed;">
+                    <div style="font-size: 40px;">🗡️</div>
+                    <div class="class-title" style="font-size: 20px;">VẠN KIẾM NHAI</div>
+                    <p style="font-size: 12px; color: #aaa;">(Chưa khai mở)</p>
+                </div>
+            </div>
+
+            <button class="btn" style="font-size: 14px; padding: 5px 20px;"
+                onclick="window.closeTeleportMap()">ĐÓNG</button>
+        </div>
+
+    </div>
+
+    <div id="scene-class-selection" class="scene" style="display: none;">
+        <div id="class-selection" class="screen-overlay">
+            <h1 style="margin: 0; font-size: 50px; text-shadow: 0 0 20px #00ffff;">TU TIÊN LỘ 2D</h1>
+            <p style="color: #ccc; margin-top: 10px;">Lựa chọn Pháp Khí Bản Mệnh</p>
+            <div class="class-container">
+                <div class="class-card" onclick="window.selectClass('sword')">
+                    <div class="class-icon">🗡️</div>
+                    <div class="class-title">KIẾM TIÊN</div>
+                    <div class="class-desc"><span style="color:#00ff00">+50 HP | +5 Đánh | +20 Tốc độ</span><br>
+                        <ul>
+                            <li><b>LMB:</b> Trảm Kích</li>
+                            <li><b>RMB:</b> Vòng Kiếm Khí</li>
+                            <li><b>[1]:</b> Trọng Kích</li>
+                            <li><b>[2]:</b> Tam Liên Trảm</li>
+                            <li><b>[3]:</b> Ngự Kiếm</li>
+                            <li><b>[Space]:</b> Tốc Biến</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="class-card" onclick="window.selectClass('bow')">
+                    <div class="class-icon">🏹</div>
+                    <div class="class-title">TIÊN CUNG</div>
+                    <div class="class-desc"><span style="color:#00ff00">+0 HP | +10 Đánh | +60 Tốc độ</span><br>
+                        <ul>
+                            <li><b>LMB:</b> Linh Tiễn</li>
+                            <li><b>RMB:</b> Tán Xạ</li>
+                            <li><b>[1]:</b> Mưa Tên</li>
+                            <li><b>[2]:</b> Xuyên Tâm</li>
+                            <li><b>[3]:</b> Bạo Phong</li>
+                            <li><b>[Space]:</b> Tốc Biến</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="scene-forest" class="scene" style="display: none;">
+    </div>
+
+    <div id="scene-dungeon" class="scene" style="display: none;">
+        <div id="boss-ui">
+            <div id="boss-name">MA TÔN HẮC ÁM</div>
+            <div class="boss-hp-bg">
+                <div class="boss-hp-fill" id="boss-hp-fill"></div><span class="boss-hp-text" id="boss-hp-text">2000 /
+                    2000</span>
+            </div>
+        </div>
+        <div id="boss-warning">⚠️ NGUY HIỂM: MA TÔN XUẤT HIỆN ⚠️</div>
+        <div id="score-board">KILLS: <span id="kill-count">0</span></div>
+    </div>
+
+    <div id="global-player-hud" class="scene" style="display: none; z-index: 10;">
+        <div id="player-profile">
+            <div class="avatar" id="player-avatar">👤</div>
+            <div class="stats-col">
+                <div style="color: #fff; font-weight: bold; font-size: 14px;">LEVEL: <span id="player-level">1</span>
+                </div>
+
+                <div class="hp-container">
+                    <div class="hp-fill" id="player-hp-fill"></div>
+                    <span class="hp-text" id="player-hp-text">100 / 100</span>
+                </div>
+
+                <div class="hp-container" style="height: 6px; background: #002222; border-color: #004444;">
+                    <div class="hp-fill" id="player-xp-fill"
+                        style="background: linear-gradient(90deg, #008888, #00ffcc); width: 0%;"></div>
+                </div>
+
+                <div class="stat-details">
+                    <span>⚔️ ATK: <span id="stat-atk">0</span></span>
+                    <span>💨 SPD: <span id="stat-spd">0</span></span>
+                </div>
+            </div>
+        </div>
+
+        <div id="instructions">
+            <h3 id="instr-title">KIẾM TIÊN</h3>
+            <ul class="instr-list">
+                <li>Di chuyển: <b>WASD</b></li>
+                <li>Lướt: <b>Space</b></li>
+                <li>Định hướng: <b>Chuột</b></li>
+                <li>Tạm dừng: <b>ESC</b></li>
+            </ul>
+            <div id="boss-goal-tutorial" class="instr-goal"></div>
+        </div>
+
+        <div id="damage-container"></div>
+
+        <div id="skill-panel">
+            <div class="skill-group">
+                <div class="skill-slot" id="ui-skill-lmb">
+                    <span class="hotkey">LMB</span>
+                    <span class="icon" id="icon-lmb">🗡️</span>
+                    <div class="cooldown-overlay" id="cd-over-lmb"></div>
+                    <div class="cooldown-text" id="cd-text-lmb"></div>
+                </div>
+                <div class="skill-slot" id="ui-skill-rmb">
+                    <span class="hotkey">RMB</span>
+                    <span class="icon" id="icon-rmb">⚔️</span>
+                    <div class="cooldown-overlay" id="cd-over-rmb"></div>
+                    <div class="cooldown-text" id="cd-text-rmb"></div>
+                </div>
+            </div>
+            <div class="skill-group">
+                <div class="skill-slot" id="ui-skill-1"><span class="hotkey">1</span><span class="icon"
+                        id="icon-1">💥</span>
+                    <div class="cooldown-overlay" id="cd-over-1"></div>
+                    <div class="cooldown-text" id="cd-text-1"></div>
+                </div>
+                <div class="skill-slot" id="ui-skill-2"><span class="hotkey">2</span><span class="icon"
+                        id="icon-2">☄️</span>
+                    <div class="cooldown-overlay" id="cd-over-2"></div>
+                    <div class="cooldown-text" id="cd-text-2"></div>
+                </div>
+                <div class="skill-slot" id="ui-skill-3"><span class="hotkey">3</span><span class="icon"
+                        id="icon-3">💫</span>
+                    <div class="cooldown-overlay" id="cd-over-3"></div>
+                    <div class="cooldown-text" id="cd-text-3"></div>
+                </div>
+                <div class="skill-slot"><span class="hotkey">Spc</span><span class="icon">💨</span>
+                    <div class="cooldown-overlay" id="cd-over-space"></div>
+                    <div class="cooldown-text" id="cd-text-space"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="menu-overlay" class="screen-overlay" style="display: none; z-index: 45; background: rgba(0,0,0,0.7);">
+            <div class="menu-wrapper" style="display: flex; gap: 40px; align-items: stretch;">
+                <div id="equipment-panel" class="eq-panel" style="display: none;">
+                    <h2 style="margin-top: 0; color: #00ffff; text-shadow: 0 0 10px #00ffff; text-align: center;">
+                        TRANG BỊ
+                    </h2>
+                    <div class="eq-layout">
+                        <div class="eq-col">
+                            <div class="eq-slot locked" data-name="Pháp Khí" id="eq-weapon"></div>
+                            <div class="eq-slot" data-name="Nón" id="eq-helmet"></div>
+                            <div class="eq-slot" data-name="Áo giáp" id="eq-armor"></div>
+                            <div class="eq-slot" data-name="Bao tay" id="eq-gloves"></div>
+                        </div>
+
+                        <div class="eq-col eq-center-col">
+                            <div class="eq-character-model" id="eq-avatar">
+                                <svg viewBox="0 0 100 200" xmlns="http://www.w3.org/2000/svg"
+                                    style="width: 100%; height: 100%; opacity: 0.3;">
+                                    <circle cx="50" cy="30" r="15" fill="#99ffff" />
+                                    <path d="M50,45 C30,45 20,60 20,90 L25,120 L75,120 L80,90 C80,60 70,45 50,45 Z"
+                                        fill="#99ffff" />
+                                    <path d="M20,55 C10,55 5,65 5,80 L10,120 C10,125 18,125 18,120 L15,85 L20,55 Z"
+                                        fill="#99ffff" />
+                                    <path d="M80,55 C90,55 95,65 95,80 L90,120 C90,125 82,125 82,120 L85,85 L80,55 Z"
+                                        fill="#99ffff" />
+                                    <path
+                                        d="M30,125 C20,125 15,135 15,150 L20,190 C20,195 28,195 28,190 L35,135 L30,125 Z"
+                                        fill="#99ffff" />
+                                    <path
+                                        d="M70,125 C80,125 85,135 85,150 L80,190 C80,195 72,195 72,190 L65,135 L70,125 Z"
+                                        fill="#99ffff" />
+                                </svg>
+                            </div>
+                            <div class="eq-slot" data-name="Thú cưỡi" id="eq-mount" style="margin-top: 20px;"></div>
+                        </div>
+
+                        <div class="eq-col">
+                            <div class="eq-slot" data-name="Dây chuyền" id="eq-necklace"></div>
+                            <div class="eq-slot" data-name="Nhẫn trái" id="eq-ring1"></div>
+                            <div class="eq-slot" data-name="Nhẫn phải" id="eq-ring2"></div>
+                            <div class="eq-slot" data-name="Giày" id="eq-boots"></div>
+                        </div>
+                    </div>
+                    <p style="text-align: center; color: #666; font-size: 11px; margin-top: auto; margin-bottom: 0;">
+                        Phím [C]
+                    </p>
+                </div>
+
+                <div id="inventory-panel" class="inv-panel" style="display: none;">
+                    <h2 style="margin-top: 0; color: #ffaa00; text-shadow: 0 0 10px #ffaa00; text-align: center;">
+                        TÚI ĐỒ
+                    </h2>
+
+                    <div id="inventory-grid" class="inv-grid">
+                    </div>
+
+                    <div class="inv-tabs" id="inv-tabs">
+                        <div class="inv-tab active" data-tab="main">Túi Chính</div>
+                        <div class="inv-tab locked" data-tab="ring1">Nhẫn 1 🔒</div>
+                        <div class="inv-tab locked" data-tab="ring2">Nhẫn 2 🔒</div>
+                    </div>
+
+                    <p style="text-align: center; color: #666; font-size: 11px; margin-top: auto; margin-bottom: 0;">
+                        Phím [B]
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div id="interaction-prompt"
+            style="display: none; position: absolute; left: 50%; top: 60%; transform: translate(-50%, -50%); color: #00ffff; background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 8px; border: 2px solid #00ffff; font-weight: bold; pointer-events: none; z-index: 100; text-transform: uppercase;">
+            Bấm [E] để tương tác
+        </div>
+    </div>
+
+    <div id="blocker" class="screen-overlay" style="display: none; z-index: 50;">
+        <h1 style="margin:0; font-size: 60px;">TẠM DỪNG</h1>
+        <button class="btn" onclick="window.resumeGame()">TIẾP TỤC</button>
+        <button id="btn-exit-village" class="btn" style="background: #aa4400; border-color: #ffaa00; display: none;"
+            onclick="window.exitToVillage()">VỀ LÀNG</button>
+    </div>
+    <div id="game-over-screen" class="screen-overlay">
+        <h1 style="margin:0; font-size: 60px;">ĐẠO TIÊU MA TRƯỞNG</h1>
+        <p style="font-size: 22px; color: #ccc;">Số yêu thú đã chém: <span id="final-score"
+                style="color:white; font-weight:bold;">0</span></p>
+        <button class="btn" onclick="window.showClassSelection()">ĐỔI PHÁP KHÍ / CHƠI LẠI</button>
+    </div>
+    <div id="victory-screen" class="screen-overlay">
+        <h1 style="margin:0; font-size: 60px;">ĐẮC ĐẠO PHI THĂNG</h1>
+        <p>Bạn đã tiêu diệt Ma Tôn Hắc Ám!</p>
+        <button class="btn" onclick="window.showClassSelection()">TIẾP TỤC TU LUYỆN</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script type="module" src="src/main.js"></script>
+</body>
+
+</html>

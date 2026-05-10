@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Low-Poly Warrior v22 - Đa Môn Phái (Classes)</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, sans-serif; background: #111; }
+        
+        #player-profile {
+            position: absolute; top: 15px; left: 15px; display: flex; align-items: center; gap: 10px;
+            background: rgba(0, 0, 0, 0.8); padding: 8px 15px 8px 8px; border-radius: 30px 10px 10px 30px; 
+            border: 2px solid #555; box-shadow: 0 4px 8px rgba(0,0,0,0.5); pointer-events: none; z-index: 10; transition: border-color 0.2s;
+        }
+        .avatar { width: 50px; height: 50px; background: #222; border: 2px solid #00ffff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; box-shadow: inset 0 0 10px rgba(0,255,255,0.3); }
+        .hp-container { width: 200px; height: 22px; background: #440000; border: 2px solid #222; border-radius: 4px; position: relative; overflow: hidden; box-shadow: inset 0 0 5px #000; }
+        .hp-fill { width: 100%; height: 100%; background: linear-gradient(90deg, #00aa00, #00ff00); transition: width 0.2s ease-out; }
+        .hp-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: bold; font-size: 13px; text-shadow: 1px 1px 0 #000, -1px -1px 0 #000; }
+
+        #boss-ui {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: none;
+            flex-direction: column; align-items: center; z-index: 10; pointer-events: none; width: 600px;
+        }
+        #boss-name { color: #ff3333; font-size: 24px; font-weight: 900; text-shadow: 2px 2px 0 #000; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px; }
+        .boss-hp-bg { width: 100%; height: 25px; background: #220000; border: 3px solid #111; border-radius: 4px; position: relative; box-shadow: 0 0 15px rgba(255,0,0,0.5); }
+        .boss-hp-fill { width: 100%; height: 100%; background: linear-gradient(90deg, #aa0000, #ff0000); transition: width 0.2s; }
+        .boss-hp-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: bold; font-size: 14px; text-shadow: 1px 1px 0 #000; }
+
+        @keyframes flashWarning { 0%, 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 50% { opacity: 0.5; transform: translate(-50%, -50%) scale(1.1); color: #fff; } }
+        #boss-warning {
+            position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%);
+            color: #ff0000; font-size: 50px; font-weight: 900; text-shadow: 4px 4px 10px #000;
+            animation: flashWarning 0.5s infinite; display: none; z-index: 100; pointer-events: none; text-align: center; width: 100%;
+        }
+
+        #instructions { position: absolute; top: 90px; left: 15px; color: white; background: rgba(0, 0, 0, 0.7); padding: 15px; border-radius: 8px; border: 1px solid #444; pointer-events: none; z-index: 10; display: none; }
+        #score-board { position: absolute; top: 15px; right: 15px; color: white; background: rgba(0, 0, 0, 0.8); padding: 10px 20px; border-radius: 8px; border: 1px solid #ff3333; font-size: 24px; font-weight: bold; pointer-events: none; z-index: 10; display: none; }
+        #kill-count { color: #ff3333; font-size: 32px; }
+
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 20px; height: 20px; transform: translate(-50%, -50%); pointer-events: none; z-index: 10; display: none; align-items: center; justify-content: center; }
+        #crosshair::before, #crosshair::after { content: ''; position: absolute; background: rgba(0, 255, 255, 0.7); }
+        #crosshair::before { width: 2px; height: 100%; }
+        #crosshair::after { width: 100%; height: 2px; }
+        
+        .screen-overlay { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.85); color: #00ffff; display: flex; justify-content: center; align-items: center; font-size: 28px; z-index: 20; flex-direction: column; text-align: center; }
+        .btn { padding: 12px 40px; border: 2px solid #00ffff; color: #00ffff; background: transparent; cursor: pointer; font-size: 22px; font-weight: bold; transition: all 0.3s; margin-top: 20px; text-transform: uppercase; }
+        .btn:hover { background: #00ffff; color: #000; }
+        
+        /* --- CLASS SELECTION SCREEN --- */
+        #class-selection { background: rgba(0,0,0,0.9); z-index: 30; }
+        .class-container { display: flex; gap: 40px; margin-top: 30px; }
+        .class-card {
+            background: #111; border: 2px solid #555; border-radius: 15px; padding: 20px; width: 300px;
+            cursor: pointer; transition: all 0.3s; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+        .class-card:hover { transform: translateY(-10px); border-color: #00ffff; box-shadow: 0 15px 30px rgba(0,255,255,0.2); }
+        .class-icon { font-size: 60px; margin-bottom: 10px; }
+        .class-title { color: #fff; font-size: 28px; font-weight: bold; margin-bottom: 10px; color: #00ffff; }
+        .class-desc { color: #aaa; font-size: 16px; line-height: 1.5; text-align: left; }
+        .class-desc ul { padding-left: 20px; margin-top: 10px; }
+        .class-desc li { margin-bottom: 5px; }
+
+        #game-over-screen { display: none; background: rgba(50, 0, 0, 0.9); color: #ff3333; }
+        #game-over-screen .btn { border-color: #ff3333; color: #ff3333; } #game-over-screen .btn:hover { background: #ff3333; color: #000; }
+        
+        #victory-screen { display: none; background: rgba(0, 50, 0, 0.9); color: #00ff00; }
+        #victory-screen .btn { border-color: #00ff00; color: #00ff00; } #victory-screen .btn:hover { background: #00ff00; color: #000; }
+
+        .floating-damage { position: absolute; color: #ffcc00; font-size: 28px; font-weight: 900; pointer-events: none; transform: translate(-50%, -50%); z-index: 100; text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000; font-style: italic; transition: opacity 0.1s; }
+        .floating-damage.crit { color: #ff3333; font-size: 40px; text-shadow: 2px 2px 0 #fff, -2px -2px 0 #fff; }
+        .floating-damage.player-dmg { color: #ff0000; font-size: 32px; font-style: normal; text-shadow: 2px 2px 0 #fff, -2px -2px 0 #fff; }
+
+        #skill-panel { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: none; gap: 30px; align-items: flex-end; z-index: 10; pointer-events: none; }
+        .skill-group { display: flex; gap: 8px; background: rgba(0, 0, 0, 0.6); padding: 10px; border-radius: 10px; border: 2px solid #333; box-shadow: 0 4px 10px rgba(0,0,0,0.8); }
+        .skill-slot { width: 50px; height: 50px; background: #222; border: 2px solid #555; border-radius: 6px; position: relative; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: inset 0 0 10px rgba(0,0,0,0.8); transition: border-color 0.2s; overflow: hidden; }
+        .skill-slot .icon { opacity: 0.8; } .skill-slot .hotkey { position: absolute; top: 2px; left: 4px; font-size: 12px; font-weight: bold; color: #00ffff; text-shadow: 1px 1px 0 #000; z-index: 2; }
+        .skill-slot.active { border-color: #00ffff; box-shadow: 0 0 10px #00ffff, inset 0 0 10px rgba(0,255,255,0.5); }
+        .cooldown-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: conic-gradient(rgba(0, 0, 0, 0.8) var(--cd, 0%), transparent 0); z-index: 3; display: none; }
+        .cooldown-text { position: absolute; font-size: 22px; font-weight: 900; color: #fff; text-shadow: 2px 2px 0 #000, -1px -1px 0 #000; z-index: 4; display: none; }
+    </style>
+</head>
+<body>
+
+    <div id="class-selection" class="screen-overlay">
+        <h1 style="margin: 0; font-size: 50px; text-shadow: 0 0 20px #00ffff;">TU TIÊN LỘ</h1>
+        <p style="color: #ccc; margin-top: 10px;">Lựa chọn con đường tu đạo của bạn</p>
+        
+        <div class="class-container">
+            <div class="class-card" id="btn-class-sword">
+                <div class="class-icon">🗡️</div>
+                <div class="class-title">KIẾM TIÊN</div>
+                <div class="class-desc">
+                    Bậc thầy cận chiến, sử dụng kiếm khí áp đảo kẻ thù. Phù hợp với lối chơi tả xung hữu đột.
+                    <ul>
+                        <li><b>LMB:</b> Trảm Kích</li>
+                        <li><b>RMB:</b> Tam Liên Trảm</li>
+                        <li><b>[1]:</b> Trọng Kích (Cận Chiến)</li>
+                        <li><b>[2]:</b> Thiên Thạch Đả</li>
+                        <li><b>[3]:</b> Ngự Kiếm Thuật</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="class-card" id="btn-class-bow">
+                <div class="class-icon">🏹</div>
+                <div class="class-title">TIÊN CUNG</div>
+                <div class="class-desc">
+                    Xạ thủ linh hoạt, tấn công từ xa với khả năng dồn sát thương cực mạnh.
+                    <ul>
+                        <li><b>LMB:</b> Linh Tiễn</li>
+                        <li><b>RMB:</b> Tán Xạ Tiễn</li>
+                        <li><b>[1]:</b> Vạn Tiễn (AOE)</li>
+                        <li><b>[2]:</b> Xuyên Tâm Tiễn</li>
+                        <li><b>[3]:</b> Bạo Phong Trận</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="player-profile" style="display: none;">
+        <div class="avatar" id="player-avatar">👤</div>
+        <div class="hp-container">
+            <div class="hp-fill" id="player-hp-fill"></div>
+            <span class="hp-text" id="player-hp-text">100 / 100</span>
+        </div>
+    </div>
+
+    <div id="boss-ui">
+        <div id="boss-name">MA TÔN HẮC ÁM</div>
+        <div class="boss-hp-bg">
+            <div class="boss-hp-fill" id="boss-hp-fill"></div>
+            <span class="boss-hp-text" id="boss-hp-text">2000 / 2000</span>
+        </div>
+    </div>
+
+    <div id="boss-warning">⚠️ NGUY HIỂM: MA TÔN XUẤT HIỆN ⚠️</div>
+
+    <div id="instructions">
+        <h3 style="margin: 0 0 10px 0; color: #00ffff;" id="instr-title">KIẾM TIÊN</h3>
+        • Di chuyển: <b>WASD</b> | Nhảy: <b>Space</b><br>
+        • Đánh thường: <b>Chuột trái</b><br>
+        • Kỹ năng 1: <b>Chuột phải</b><br>
+        • Kỹ năng 2 (AOE): <b>Phím 1</b><br>
+        • Kỹ năng 3: <b>Phím 2</b><br>
+        • Kỹ năng 4: <b>Phím 3</b><br>
+        <span id="boss-goal-tutorial" style="color:#ffaa00; font-size:14px;">Mục tiêu: Đạt 10 Kills để gặp Ma Tôn!</span>
+    </div>
+
+    <div id="score-board">KILLS: <span id="kill-count">0</span><span id="max-kill-text"> / 10</span></div>
+    
+    <div id="crosshair"></div>
+    
+    <div id="blocker" class="screen-overlay" style="display: none;">
+        <h1 style="margin:0;">TẠM DỪNG</h1>
+        <button class="btn" id="btn-resume">TIẾP TỤC</button>
+    </div>
+    
+    <div id="game-over-screen" class="screen-overlay">
+        <h1 style="margin:0; font-size: 60px;">ĐẠO TIÊU MA TRƯỞNG</h1>
+        <p style="font-size: 22px; color: #ccc;">Số yêu thú đã chém: <span id="final-score" style="color:white; font-weight:bold;">0</span></p>
+        <button class="btn" id="btn-restart">ĐỔI MÔN PHÁI / CHƠI LẠI</button>
+    </div>
+
+    <div id="victory-screen" class="screen-overlay">
+        <h1 style="margin:0; font-size: 60px;">ĐẮC ĐẠO PHI THĂNG</h1>
+        <p>Bạn đã tiêu diệt Ma Tôn Hắc Ám!</p>
+        <button class="btn" id="btn-victory-restart">ĐỔI MÔN PHÁI / CHƠI LẠI</button>
+    </div>
+
+    <div id="damage-container"></div>
+
+    <div id="skill-panel">
+        <div class="skill-group">
+            <div class="skill-slot">
+                <span class="hotkey">LMB</span><span class="icon" id="icon-lmb">🗡️</span>
+            </div>
+            <div class="skill-slot" id="ui-skill-rmb">
+                <span class="hotkey">RMB</span><span class="icon" id="icon-rmb">⚔️</span>
+                <div class="cooldown-overlay" id="cd-over-rmb"></div>
+                <div class="cooldown-text" id="cd-text-rmb"></div>
+            </div>
+        </div>
+        <div class="skill-group">
+            <div class="skill-slot" id="ui-skill-1">
+                <span class="hotkey">1</span><span class="icon" id="icon-1">⭕</span>
+                <div class="cooldown-overlay" id="cd-over-1"></div>
+                <div class="cooldown-text" id="cd-text-1"></div>
+            </div>
+            <div class="skill-slot" id="ui-skill-2">
+                <span class="hotkey">2</span><span class="icon" id="icon-2">☄️</span>
+                <div class="cooldown-overlay" id="cd-over-2"></div>
+                <div class="cooldown-text" id="cd-text-2"></div>
+            </div>
+            <div class="skill-slot" id="ui-skill-3">
+                <span class="hotkey">3</span><span class="icon" id="icon-3">💫</span>
+                <div class="cooldown-overlay" id="cd-over-3"></div>
+                <div class="cooldown-text" id="cd-text-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="importmap">{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }</script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        let scene, camera, renderer, ground, playerGroup, playerBody, swordPivot, bowPivot;
+        let blocker = document.getElementById('blocker'), gameOverScreen = document.getElementById('game-over-screen'), victoryScreen = document.getElementById('victory-screen');
+        let classSelectionScreen = document.getElementById('class-selection');
+        let killCountElement = document.getElementById('kill-count'), damageContainer = document.getElementById('damage-container');
+        let maxKillText = document.getElementById('max-kill-text');
+        
+        let uiSkill1 = document.getElementById('ui-skill-1'), cdOver1 = document.getElementById('cd-over-1'), cdText1 = document.getElementById('cd-text-1');
+        let cdOverRMB = document.getElementById('cd-over-rmb'), cdTextRMB = document.getElementById('cd-text-rmb');
+        let cdOver2 = document.getElementById('cd-over-2'), cdText2 = document.getElementById('cd-text-2');
+        let uiSkill3 = document.getElementById('ui-skill-3'), cdOver3 = document.getElementById('cd-over-3'), cdText3 = document.getElementById('cd-text-3');
+        
+        let isControlsEnabled = false, slashes = [], enemies = [], particles = [], floatingTexts = [];
+        
+        // --- CLASS SYSTEM ---
+        let selectedClass = null; // 'sword' or 'bow'
+
+        // --- CÁC BIẾN TOÀN CỤC ---
+        const playerMaxHp = 100; 
+        let playerHp = playerMaxHp; 
+        let isDead = false; 
+        let isVictory = false; 
+        let iFrames = 0;
+
+        let boss = null; const KILLS_TO_SPAWN_BOSS = 10;
+        let bossWarningUI = document.getElementById('boss-warning'), bossHpUI = document.getElementById('boss-ui');
+        let bossEffects = []; let bossProjectiles = []; let bossSkillWarningMesh = null;
+        let bossSkillData = { active: false, type: 0, timer: 0, damage: 50, isFiring: false, fireDuration: 0, fireTick: 0 };
+
+        // --- SKILL COOLDOWNS ---
+        let CD_AOE_TIME = 6000, CD_SKILL2_TIME = 8000, CD_PLUNGE_TIME = 10000, CD_SKILL3_TIME = 15000; 
+        let timerAOE = 0, timerSkill2 = 0, timerPlunge = 0, timerSkill3 = 0, previousFrameTime = 0;
+
+        // KIẾM TIÊN SKILLS
+        let isAimingAOE = false, aoeIndicatorGroup, aoeTargetPos = new THREE.Vector3();
+        const aoeCastRange = 25, aoeNormalRadius = 7, aoeCritRadius = 3;
+        let raycaster = new THREE.Raycaster(), centerScreen = new THREE.Vector2(0, 0), aoeEffects = []; 
+        let isSkill2Active = false, skill2Timer = 0, skill2Phase = 0, skill2CastYaw = 0;
+        let isPlungeActive = false, plungePhase = 0, plungeTimer = 0, plungeDir = new THREE.Vector3();
+        
+        let pendingHeavyStrike = false; 
+        let heavyStrikeDir = new THREE.Vector3();
+
+        const SKILL3_DURATION_TIME = 10000; 
+        let skill3DurationTimer = 0, isSkill3Active = false, skill3Swords = [], skill3AttackTick = 0;
+
+        // TIÊN CUNG SKILLS
+        let tornados = []; // Dành cho Bạo Phong Trận
+        let activeArrowRains = [];
+        let kills = 0, lastSpawnTime = 0, gameStartTime = 0; const enemySpawnRate = 1500; 
+
+        const keys = { w: false, a: false, s: false, d: false, space: false };
+        let velocityY = 0; const gravity = -0.012; const jumpStrength = 0.22; const moveSpeed = 0.15; let isGrounded = true;
+        let cameraYaw = 0; let cameraPitch = 0.2; const mouseSensitivity = 0.0025; const cameraRadius = 7;
+        let isAttacking = false, attackProgress = 0, attackSpeed = 0.18;
+
+        init();
+        requestAnimationFrame(animate);
+
+        function init() {
+            scene = new THREE.Scene(); 
+            scene.background = new THREE.Color(0x070b19); 
+            scene.fog = new THREE.FogExp2(0x070b19, 0.015); 
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ antialias: true }); 
+            renderer.setSize(window.innerWidth, window.innerHeight); 
+            renderer.shadowMap.enabled = true;
+            document.body.appendChild(renderer.domElement);
+
+            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+            const moonlight = new THREE.DirectionalLight(0x88ccff, 2.5); 
+            moonlight.position.set(10, 40, -10); moonlight.castShadow = true; scene.add(moonlight);
+
+            ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshStandardMaterial({ color: 0x99bbbb, roughness: 0.1, metalness: 0.2 }));
+            ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+            
+            const grid = new THREE.GridHelper(200, 50, 0x00ffff, 0x004466); 
+            grid.material.opacity = 0.3; grid.material.transparent = true; scene.add(grid);
+
+            for(let i=0; i<20; i++) {
+                const obstacle = new THREE.Mesh(
+                    new THREE.BoxGeometry(2, Math.random()*5 + 2, 2), 
+                    new THREE.MeshStandardMaterial({color: 0x223344, roughness: 0.8, emissive: 0x001122})
+                );
+                obstacle.position.set((Math.random() - 0.5) * 80, 0, (Math.random() - 0.5) * 80); 
+                obstacle.position.y = obstacle.geometry.parameters.height / 2; 
+                obstacle.castShadow = true; scene.add(obstacle);
+            }
+
+            playerGroup = new THREE.Group();
+            playerBody = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 0.8, 4, 8), new THREE.MeshStandardMaterial({ color: 0xeeeeee, transparent: true, opacity: 1.0, roughness: 0.5 }));
+            playerBody.position.y = 0.8; playerBody.castShadow = true; playerGroup.add(playerBody);
+            
+            const aura = new THREE.Mesh(new THREE.RingGeometry(0.6, 0.8, 32), new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.6, side: THREE.DoubleSide }));
+            aura.rotation.x = -Math.PI / 2; aura.position.y = -0.75; playerBody.add(aura);
+
+            // --- VŨ KHÍ 1: KIẾM ---
+            swordPivot = new THREE.Group(); swordPivot.position.set(0.5, 0.2, 0.3); playerBody.add(swordPivot);
+            const blade = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.2, 0.15), new THREE.MeshStandardMaterial({color: 0xccffff, emissive: 0x00aaff, emissiveIntensity: 0.8, metalness: 1.0, roughness: 0.1})); 
+            blade.position.y = 0.6; blade.castShadow = true; swordPivot.add(blade);
+            const guard = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.05, 0.1), new THREE.MeshStandardMaterial({color: 0xffdd00, metalness: 1.0})); guard.position.y = 0.1; swordPivot.add(guard);
+            swordPivot.rotation.x = Math.PI / 4; 
+
+            // --- VŨ KHÍ 2: CUNG ---
+            bowPivot = new THREE.Group(); bowPivot.position.set(0.5, 0.2, 0.5); playerBody.add(bowPivot);
+            const bowCurve = new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.05, 8, 16, Math.PI), new THREE.MeshStandardMaterial({color: 0x33ff55, emissive: 0x00aa22, metalness: 0.5}));
+            bowCurve.rotation.z = -Math.PI / 2; bowCurve.rotation.y = Math.PI / 2; bowCurve.position.x = 0.2;
+            const bowString = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 1.2), new THREE.MeshBasicMaterial({color: 0xffffff}));
+            bowString.position.x = -0.4;
+            bowPivot.add(bowCurve); bowPivot.add(bowString);
+            
+            // Ẩn cả 2 vũ khí ban đầu
+            swordPivot.visible = false; bowPivot.visible = false;
+
+            scene.add(playerGroup);
+
+            initAOEIndicator(); setupControls(); setupDynamicUI();
+            
+            // Lắng nghe sự kiện chọn Class
+            document.getElementById('btn-class-sword').addEventListener('click', () => selectClass('sword'));
+            document.getElementById('btn-class-bow').addEventListener('click', () => selectClass('bow'));
+        }
+
+        function selectClass(className) {
+            selectedClass = className;
+            classSelectionScreen.style.display = 'none';
+            
+            // Hiển thị UI Game
+            document.getElementById('player-profile').style.display = 'flex';
+            document.getElementById('instructions').style.display = 'block';
+            document.getElementById('score-board').style.display = 'block';
+            document.getElementById('crosshair').style.display = 'flex';
+            document.getElementById('skill-panel').style.display = 'flex';
+
+            // Cấu hình vũ khí và UI
+            if (className === 'sword') {
+                swordPivot.visible = true; bowPivot.visible = false;
+                document.getElementById('instr-title').innerText = "KIẾM TIÊN";
+                document.getElementById('player-avatar').innerText = "🗡️";
+                document.getElementById('icon-lmb').innerText = "🗡️";
+                document.getElementById('icon-rmb').innerText = "⚔️";
+                document.getElementById('icon-1').innerText = "💥";
+                document.getElementById('icon-2').innerText = "☄️";
+                document.getElementById('icon-3').innerText = "💫";
+                
+                CD_AOE_TIME = 6000; CD_SKILL2_TIME = 8000; CD_PLUNGE_TIME = 10000; CD_SKILL3_TIME = 15000;
+            } else {
+                swordPivot.visible = false; bowPivot.visible = true;
+                document.getElementById('instr-title').innerText = "TIÊN CUNG";
+                document.getElementById('player-avatar').innerText = "🏹";
+                document.getElementById('icon-lmb').innerText = "🏹";
+                document.getElementById('icon-rmb').innerText = "🎏";
+                document.getElementById('icon-1').innerText = "🌧️";
+                document.getElementById('icon-2').innerText = "🚀";
+                document.getElementById('icon-3').innerText = "🌪️";
+                
+                // Set lại CD cho Bow
+                CD_SKILL2_TIME = 4000; // Tán xạ
+                CD_AOE_TIME = 8000;    // Mưa tên
+                CD_PLUNGE_TIME = 10000; // Xuyên Tâm
+                CD_SKILL3_TIME = 15000; // Bão
+            }
+
+            if (gameStartTime === 0) { gameStartTime = performance.now(); previousFrameTime = performance.now(); }
+            renderer.domElement.requestPointerLock();
+        }
+
+        function setupDynamicUI() {
+            const tutorialEl = document.getElementById('boss-goal-tutorial');
+            if (tutorialEl) tutorialEl.innerText = `Mục tiêu: Đạt ${KILLS_TO_SPAWN_BOSS} Kills để gặp Ma Tôn!`;
+            const maxKillEl = document.getElementById('max-kill-text');
+            if (maxKillEl) maxKillEl.innerText = ` / ${KILLS_TO_SPAWN_BOSS}`;
+        }
+
+        function initAOEIndicator() {
+            aoeIndicatorGroup = new THREE.Group(); aoeIndicatorGroup.position.y = 0.05; 
+            const nRing = new THREE.Mesh(new THREE.RingGeometry(aoeNormalRadius - 0.2, aoeNormalRadius, 64), new THREE.MeshBasicMaterial({ color: 0xffaa00, side: THREE.DoubleSide, transparent: true, opacity: 0.6 })); nRing.rotation.x = -Math.PI / 2; aoeIndicatorGroup.add(nRing);
+            const cRing = new THREE.Mesh(new THREE.RingGeometry(aoeCritRadius - 0.2, aoeCritRadius, 64), new THREE.MeshBasicMaterial({ color: 0xff3300, side: THREE.DoubleSide, transparent: true, opacity: 0.8 })); cRing.rotation.x = -Math.PI / 2; aoeIndicatorGroup.add(cRing);
+            const cFill = new THREE.Mesh(new THREE.CircleGeometry(aoeCritRadius, 64), new THREE.MeshBasicMaterial({ color: 0xffaa00, side: THREE.DoubleSide, transparent: true, opacity: 0.1 })); cFill.rotation.x = -Math.PI / 2; aoeIndicatorGroup.add(cFill);
+            aoeIndicatorGroup.visible = false; scene.add(aoeIndicatorGroup);
+        }
+
+        function spawnBoss() {
+            for (let i = enemies.length - 1; i >= 0; i--) { scene.remove(enemies[i].mesh); scene.remove(enemies[i].healthGroupNode); }
+            enemies = [];
+
+            bossWarningUI.style.display = 'block'; setTimeout(() => { bossWarningUI.style.display = 'none'; }, 3000);
+            maxKillText.style.display = 'none'; 
+
+            const bg = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.BoxGeometry(3.5, 5, 3.5), new THREE.MeshStandardMaterial({ color: 0x050011, roughness: 0.4 }));
+            body.position.y = 2.5; body.castShadow = true; bg.add(body);
+            const eye = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.6, 0.2), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xff0033, emissiveIntensity: 10 }));
+            eye.position.set(0, 3.8, 1.76); bg.add(eye);
+
+            const halo = new THREE.Mesh(new THREE.TorusGeometry(3.5, 0.15, 16, 64), new THREE.MeshBasicMaterial({ color: 0xff0055, transparent: true, opacity: 0.8 }));
+            halo.position.set(0, 3, -1); bg.add(halo);
+
+            bg.position.set(playerGroup.position.x, 0, playerGroup.position.z - 35);
+            scene.add(bg);
+
+            boss = { mesh: bg, halo: halo, speed: 0.035, hp: 3000, maxHp: 3000, hitRadius: 5.0, skillCd: 3500, currentCd: 2000 };
+            bossHpUI.style.display = 'flex'; updateBossHpUI();
+        }
+
+        function updateBossHpUI() {
+            if(!boss) return;
+            document.getElementById('boss-hp-fill').style.width = (boss.hp / boss.maxHp * 100) + '%';
+            document.getElementById('boss-hp-text').innerText = Math.ceil(boss.hp) + ' / ' + boss.maxHp;
+        }
+
+        function spawnEnemy() {
+            if(boss) return; 
+            const eg = new THREE.Group();
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8, emissive: 0x220000 });
+            eg.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), bodyMat));
+            const eye = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.2, 0.1), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xff0000, emissiveIntensity: 5 })); 
+            eye.position.set(0, 0.7, 0.51); eg.add(eye);
+            
+            const angle = Math.random() * Math.PI * 2; const dist = 30 + Math.random() * 10; 
+            eg.position.set(playerGroup.position.x + Math.cos(angle) * dist, 0, playerGroup.position.z + Math.sin(angle) * dist); scene.add(eg);
+
+            const hb = new THREE.Group(); hb.add(new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.15), new THREE.MeshBasicMaterial({ color: 0x220022, depthTest: false, side: THREE.DoubleSide })));
+            const fg = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.15).translate(0.6, 0, 0), new THREE.MeshBasicMaterial({ color: 0xaa00ff, depthTest: false, side: THREE.DoubleSide })); fg.position.x = -0.6; hb.add(fg);
+            hb.children[0].renderOrder = 999; fg.renderOrder = 1000; scene.add(hb);
+
+            const hp = 1 + Math.floor((performance.now() - gameStartTime) / 15000); 
+            const dmg = 10 + Math.floor((performance.now() - gameStartTime) / 30000) * 5; 
+            enemies.push({ mesh: eg, speed: 0.05 + Math.random() * 0.03, hp: hp, maxHp: hp, damage: dmg, healthBarNode: fg, healthGroupNode: hb });
+        }
+
+        function spawnDamageText(amount, position3D, isCrit = false, isPlayer = false) {
+            const el = document.createElement('div'); el.className = isPlayer ? 'floating-damage player-dmg' : (isCrit ? 'floating-damage crit' : 'floating-damage'); el.innerText = '-' + amount; damageContainer.appendChild(el);
+            floatingTexts.push({ element: el, pos: position3D.clone().add(new THREE.Vector3((Math.random() - 0.5)*0.5, 1.2, (Math.random() - 0.5)*0.5)), life: 1.0, velocity: new THREE.Vector3(0, 0.04, 0) });
+        }
+
+        function spawnBlood(position) {
+            for (let i = 0; i < 15; i++) {
+                const particle = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.15), new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x550000 }));
+                particle.position.copy(position); particle.position.y += 0.5;
+                scene.add(particle); particles.push({ mesh: particle, velocity: new THREE.Vector3((Math.random() - 0.5) * 0.3, Math.random() * 0.3 + 0.1, (Math.random() - 0.5) * 0.3), life: 1.0 });
+            }
+        }
+        function spawnTrail(pos) {
+            const particle = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.3), new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.5 }));
+            particle.position.copy(pos).add(new THREE.Vector3((Math.random()-0.5)*0.5, Math.random()*0.8, (Math.random()-0.5)*0.5));
+            scene.add(particle); particles.push({ mesh: particle, velocity: new THREE.Vector3(0,0,0), life: 0.4 }); 
+        }
+
+        function takePlayerDamage(amount) {
+            if (isDead || isVictory) return;
+            playerHp -= amount; if (playerHp < 0) playerHp = 0;
+            document.getElementById('player-hp-fill').style.width = (playerHp / playerMaxHp * 100) + '%';
+            document.getElementById('player-hp-text').innerText = playerHp + ' / ' + playerMaxHp;
+            spawnDamageText(amount, playerGroup.position, false, true);
+            iFrames = 500; document.getElementById('player-profile').style.borderColor = '#ff0000';
+            
+            if (playerHp === 0) { 
+                isDead = true; isControlsEnabled = false; document.exitPointerLock(); 
+                playerBody.rotation.z = Math.PI / 2; playerBody.position.y = 0.2; 
+                document.getElementById('final-score').innerText = kills; 
+                gameOverScreen.style.display = 'flex'; 
+            }
+        }
+
+        function damageBoss(amount) {
+            if(!boss) return;
+            boss.hp -= amount; spawnDamageText(amount, boss.mesh.position, true); spawnBlood(boss.mesh.position); updateBossHpUI();
+            
+            if(boss.hp <= 0) {
+                scene.remove(boss.mesh);
+                if (bossSkillWarningMesh) { scene.remove(bossSkillWarningMesh); bossSkillWarningMesh = null; }
+                boss = null; bossHpUI.style.display = 'none';
+                
+                isVictory = true; isControlsEnabled = false; document.exitPointerLock();
+                victoryScreen.style.display = 'flex';
+            }
+        }
+
+        // --- HÀM TẠO ĐẠN CỦA BOSS ---
+        function spawnBossProjectile() {
+            if (!boss) return;
+            const geo = new THREE.IcosahedronGeometry(0.5, 0); 
+            const mat = new THREE.MeshBasicMaterial({ color: 0xff00ff }); 
+            const bullet = new THREE.Mesh(geo, mat);
+            bullet.position.set(boss.mesh.position.x, boss.mesh.position.y + 3.5, boss.mesh.position.z); 
+            const targetPos = new THREE.Vector3(playerGroup.position.x, playerGroup.position.y + 1.0, playerGroup.position.z);
+            const dir = new THREE.Vector3().subVectors(targetPos, bullet.position).normalize();
+            
+            scene.add(bullet);
+            bossProjectiles.push({ mesh: bullet, dir: dir, speed: 0.6, life: 3.0 }); 
+        }
+
+        function executeBossSkill(type) {
+            bossSkillData.active = false;
+            if(bossSkillWarningMesh) { scene.remove(bossSkillWarningMesh); bossSkillWarningMesh = null; }
+            if(!boss) return;
+            
+            if (type === 0) boss.currentCd = 3500;       
+            else if (type === 1) boss.currentCd = 5000;  
+
+            if (type === 0) {
+                const wave = new THREE.Mesh(new THREE.CylinderGeometry(7, 7, 15, 32).translate(0, 7.5, 0), new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.8 }));
+                wave.position.set(bossSkillData.x, 0, bossSkillData.z); scene.add(wave); bossEffects.push({ mesh: wave, type: 0, life: 1.0 });
+                if (iFrames <= 0 && playerGroup.position.distanceTo(new THREE.Vector3(bossSkillData.x, playerGroup.position.y, bossSkillData.z)) <= 7) takePlayerDamage(50);
+            } 
+            else if (type === 1) {
+                const wave = new THREE.Mesh(new THREE.RingGeometry(0.8, 1.0, 64), new THREE.MeshBasicMaterial({ color: 0xff5500, transparent: true, opacity: 0.9, side: THREE.DoubleSide }));
+                wave.rotation.x = -Math.PI / 2; wave.position.copy(boss.mesh.position); wave.position.y = 0.2; 
+                scene.add(wave); bossEffects.push({ mesh: wave, type: 1, life: 2.0, radius: 3 });
+            }
+        }
+
+        // --- SKILL CỦA CUNG THỦ (TIÊN CUNG) ---
+        function shootArrow() {
+            isAttacking = true; attackProgress = 0;
+            const arrowGroup = new THREE.Group();
+            const arrow = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.5), new THREE.MeshStandardMaterial({color: 0x33ff55, emissive: 0x33ff55, emissiveIntensity: 2}));
+            arrow.rotation.x = Math.PI / 2; arrowGroup.add(arrow);
+            const dir = new THREE.Vector3(); camera.getWorldDirection(dir); dir.y = 0; dir.normalize();
+            arrowGroup.position.copy(playerGroup.position).add(new THREE.Vector3(0, 1.0, 0)).addScaledVector(dir, 0.6);
+            arrowGroup.lookAt(arrowGroup.position.clone().add(dir));
+            scene.add(arrowGroup);
+            slashes.push({ mesh: arrowGroup, direction: dir.clone(), life: 2.0, speed: 0.8, hitTargets: new Set(), damage: 15, isArrow: true });
+        }
+
+        function shootMultiArrow() {
+            isAttacking = true; attackProgress = 0;
+            const dir = new THREE.Vector3(); camera.getWorldDirection(dir); dir.y = 0; dir.normalize();
+            for(let i=0; i<5; i++) {
+                const angleOffset = (i - 2) * 0.15;
+                const shootDir = dir.clone().applyAxisAngle(new THREE.Vector3(0,1,0), angleOffset);
+                const arrowGroup = new THREE.Group();
+                const arrow = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.5), new THREE.MeshStandardMaterial({color: 0x33ff55, emissive: 0x33ff55, emissiveIntensity: 2}));
+                arrow.rotation.x = Math.PI / 2; arrowGroup.add(arrow);
+                arrowGroup.position.copy(playerGroup.position).add(new THREE.Vector3(0, 1.0, 0)).addScaledVector(shootDir, 0.6);
+                arrowGroup.lookAt(arrowGroup.position.clone().add(shootDir));
+                scene.add(arrowGroup);
+                slashes.push({ mesh: arrowGroup, direction: shootDir, life: 1.5, speed: 0.8, hitTargets: new Set(), damage: 10, isArrow: true });
+            }
+            timerSkill2 = CD_SKILL2_TIME;
+        }
+
+        function shootPiercingArrow() {
+            const dir = new THREE.Vector3(); camera.getWorldDirection(dir); dir.y = 0; dir.normalize();
+            const arrowGroup = new THREE.Group();
+            const arrow = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 4), new THREE.MeshStandardMaterial({color: 0xff3300, emissive: 0xff3300, emissiveIntensity: 5}));
+            arrow.rotation.x = Math.PI / 2; arrowGroup.add(arrow);
+            arrowGroup.position.copy(playerGroup.position).add(new THREE.Vector3(0, 1.0, 0)).addScaledVector(dir, 1.0);
+            arrowGroup.lookAt(arrowGroup.position.clone().add(dir));
+            scene.add(arrowGroup);
+            slashes.push({ mesh: arrowGroup, direction: dir.clone(), life: 2.0, speed: 1.2, hitTargets: new Set(), damage: 60, isArrow: true, isPiercing: true });
+            
+            // Giật lùi xíu cho ngầu
+            playerGroup.position.addScaledVector(dir, -2.0);
+            timerPlunge = CD_PLUNGE_TIME;
+        }
+
+        function startTornado() {
+            const dir = new THREE.Vector3(); camera.getWorldDirection(dir); dir.y = 0; dir.normalize();
+            const tornado = new THREE.Mesh(new THREE.ConeGeometry(3, 10, 16), new THREE.MeshStandardMaterial({color: 0x33ffaa, transparent: true, opacity: 0.6, side: THREE.DoubleSide}));
+            tornado.position.copy(playerGroup.position).add(new THREE.Vector3(0, 5, 0)).addScaledVector(dir, 2);
+            scene.add(tornado);
+            // FIX: Đảm bảo có biến tick = 0 để bắt đầu tính sát thương
+            tornados.push({ mesh: tornado, direction: dir.clone(), life: 5.0, speed: 0.1, tick: 0 });
+            timerSkill3 = CD_SKILL3_TIME;
+        }
+
+        // --- SKILL CỦA KIẾM TIÊN ---
+        function startPlungeAttack() { isPlungeActive = true; plungePhase = 0; plungeTimer = 0; camera.getWorldDirection(plungeDir); plungeDir.y = 0; plungeDir.normalize(); timerPlunge = CD_PLUNGE_TIME; }
+
+        function executePlungeSmash() {
+            const wave = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.2, 32), new THREE.MeshBasicMaterial({ color: 0xff3300, transparent: true, opacity: 0.8 }));
+            wave.position.copy(playerGroup.position); scene.add(wave); aoeEffects.push({ mesh: wave, life: 1.0, scaleSpeed: 0.6, isShockwave: true }); cameraPitch -= 0.1;
+
+            const smashRadius = 12; const smashDamage = 15;
+            for (let j = enemies.length - 1; j >= 0; j--) {
+                let enemy = enemies[j];
+                if (playerGroup.position.distanceTo(enemy.mesh.position) <= smashRadius) {
+                    enemy.hp -= smashDamage; spawnDamageText(smashDamage, enemy.mesh.position, true); spawnBlood(enemy.mesh.position);
+                    if (enemy.hp <= 0) { scene.remove(enemy.mesh); scene.remove(enemy.healthGroupNode); enemies.splice(j, 1); kills++; killCountElement.innerText = kills; } else { enemy.healthBarNode.scale.x = Math.max(0, enemy.hp / enemy.maxHp); }
+                }
+            }
+            if (boss && playerGroup.position.distanceTo(boss.mesh.position) <= smashRadius) { damageBoss(smashDamage * 10); }
+        }
+
+        function startSkill2() { isSkill2Active = true; skill2Timer = 0; skill2Phase = 0; skill2CastYaw = cameraYaw; timerSkill2 = CD_SKILL2_TIME; }
+
+        function startSkill3() {
+            isSkill3Active = true; skill3DurationTimer = SKILL3_DURATION_TIME; skill3AttackTick = 0; uiSkill3.classList.add('active');
+            for (let i = 0; i < 4; i++) {
+                const swordGroup = new THREE.Group();
+                const blade = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 0.2), new THREE.MeshStandardMaterial({color: 0xccffff, emissive: 0x00aaff, emissiveIntensity: 0.8, metalness: 1.0, roughness: 0.1}));
+                blade.rotation.x = Math.PI / 2; blade.position.z = 0.4; swordGroup.add(blade); scene.add(swordGroup);
+                skill3Swords.push({ group: swordGroup, state: 'orbit', target: null, baseIndex: i });
+            }
+        }
+
+        function performAttack() {
+            isAttacking = true; attackProgress = 0;
+            const slash = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.05, 8, 32, Math.PI * 0.8).rotateZ(-Math.PI * 0.4).rotateX(Math.PI / 2).rotateY(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 5, transparent: true, opacity: 0.9, side: THREE.DoubleSide }));
+            const dir = new THREE.Vector3(); camera.getWorldDirection(dir); dir.y = 0; dir.normalize();
+            slash.position.copy(playerGroup.position).add(new THREE.Vector3(0, 1.0, 0)).addScaledVector(dir, 0.6); slash.lookAt(slash.position.clone().add(dir));
+            slashes.push({ mesh: slash, direction: dir.clone(), life: 1.0, speed: 0.4, hitTargets: new Set(), damage: 10, isArrow: false }); 
+            scene.add(slash);
+        }
+
+        function executeHeavyStrike() {
+            uiSkill1.classList.remove('active');
+            timerAOE = CD_AOE_TIME; 
+            
+            // Bắt đầu Animation vung kiếm SIÊU CHẬM
+            isAttacking = true; 
+            attackProgress = 0; 
+            attackSpeed = 0.05; // Càng nhỏ chém càng chậm và nặng
+            
+            // Lưu lại hướng mặt để nổ sát thương sau
+            camera.getWorldDirection(heavyStrikeDir); 
+            heavyStrikeDir.y = 0; 
+            heavyStrikeDir.normalize();
+
+            // Bật cờ "Đang gồng chiêu"
+            pendingHeavyStrike = true; 
+        }
+
+        function triggerHeavyStrikeDamage(dir) {
+            // HIỆU ỨNG 1: Kiếm khí bổ dọc 
+            const slash = new THREE.Mesh(new THREE.TorusGeometry(6.0, 0.2, 8, 32, Math.PI), new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0xffaa00, emissiveIntensity: 10, transparent: true, opacity: 0.9, side: THREE.DoubleSide }));
+            slash.position.copy(playerGroup.position).add(new THREE.Vector3(0, 1.5, 0)).addScaledVector(dir, 3.0);
+            slash.lookAt(slash.position.clone().add(dir)); slash.rotation.z = Math.PI / 2; 
+            scene.add(slash);
+            aoeEffects.push({ mesh: slash, life: 0.4, scaleSpeed: 0.08, isShockwave: false });
+
+            // HIỆU ỨNG 2: Vệt nứt đất
+            const groundCrack = new THREE.Mesh(new THREE.BoxGeometry(4.0, 0.1, 15), new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.8 }));
+            groundCrack.position.copy(playerGroup.position).addScaledVector(dir, 7.5); 
+            groundCrack.position.y = 0.1;
+            groundCrack.lookAt(groundCrack.position.clone().add(dir)); 
+            scene.add(groundCrack); 
+            aoeEffects.push({ mesh: groundCrack, life: 0.5, scaleSpeed: 0.05, isShockwave: false });
+            
+            cameraPitch -= 0.15; // Giật màn hình
+
+            // SÁT THƯƠNG: Hitbox Hình Hộp Chữ Nhật (Dài 15m, Rộng 5m)
+            for (let j = enemies.length - 1; j >= 0; j--) {
+                let enemy = enemies[j];
+                let toEnemy = enemy.mesh.position.clone().sub(playerGroup.position);
+                
+                let forwardDist = toEnemy.dot(dir); // Tính khoảng cách dọc theo hướng nhìn
+                
+                // BẮT BUỘC quái phải nằm TỪ 0.5m đến 15.5m ở PHÍA TRƯỚC (Bỏ qua quái ôm lưng)
+                if (forwardDist > 0.5 && forwardDist <= 15.5) {
+                    // Tính độ lệch của quái sang 2 bên
+                    let orthoDist = toEnemy.clone().sub(dir.clone().multiplyScalar(forwardDist)).length();
+                    
+                    // Nếu nằm trong chiều rộng 5m (Lệch sang mỗi bên tối đa 2.5m)
+                    if (orthoDist <= 2.5) {
+                        enemy.hp -= 40; 
+                        spawnDamageText(40, enemy.mesh.position, true); 
+                        spawnBlood(enemy.mesh.position);
+                        if (enemy.hp <= 0) { 
+                            scene.remove(enemy.mesh); scene.remove(enemy.healthGroupNode); 
+                            enemies.splice(j, 1); kills++; killCountElement.innerText = kills; 
+                        } else { 
+                            enemy.healthBarNode.scale.x = Math.max(0, enemy.hp / enemy.maxHp); 
+                        }
+                    }
+                }
+            }
+            
+            // Áp dụng tương tự cho Boss
+            if (boss) {
+                let toBoss = boss.mesh.position.clone().sub(playerGroup.position);
+                let forwardDist = toBoss.dot(dir);
+                if (forwardDist > 0.5 && forwardDist <= 15.5) {
+                    let orthoDist = toBoss.clone().sub(dir.clone().multiplyScalar(forwardDist)).length();
+                    if (orthoDist <= 4.0) { // Boss to nên cho quét trúng rộng hơn xíu
+                        damageBoss(40); 
+                    }
+                }
+            }
+        }
+
+        function castAOESkill() {
+            isAimingAOE = false; aoeIndicatorGroup.visible = false; uiSkill1.classList.remove('active'); timerAOE = CD_AOE_TIME;
+            
+            // TIÊN CUNG: Tạo cơn mưa kéo dài 3 giây
+            activeArrowRains.push({
+                x: aoeTargetPos.x,
+                z: aoeTargetPos.z,
+                duration: 3000,   
+                spawnTick: 0,     
+                damageTick: 0     
+            });
+            
+            const rainArea = new THREE.Mesh(new THREE.CylinderGeometry(aoeNormalRadius, aoeNormalRadius, 0.5, 32), new THREE.MeshBasicMaterial({ color: 0x33ff55, transparent: true, opacity: 0.2 }));
+            rainArea.position.set(aoeTargetPos.x, 0.2, aoeTargetPos.z);
+            scene.add(rainArea);
+            aoeEffects.push({ mesh: rainArea, life: 3.0, scaleSpeed: 0, isShockwave: false });
+        }
+
+        function restartGame() {
+            // Chuyển về màn hình chọn Class
+            isDead = false; isVictory = false; playerHp = playerMaxHp; kills = 0; 
+            killCountElement.innerText = kills; maxKillText.style.display = 'inline';
+            document.getElementById('player-hp-fill').style.width = '100%'; document.getElementById('player-hp-text').innerText = playerHp + ' / ' + playerMaxHp;
+            
+            gameOverScreen.style.display = 'none'; victoryScreen.style.display = 'none'; document.getElementById('player-profile').style.borderColor = '#555';
+            
+            for (let i = enemies.length - 1; i >= 0; i--) { scene.remove(enemies[i].mesh); scene.remove(enemies[i].healthGroupNode); } enemies = [];
+            for (let i = slashes.length - 1; i >= 0; i--) { scene.remove(slashes[i].mesh); } slashes = [];
+            for (let i = bossEffects.length - 1; i >= 0; i--) { scene.remove(bossEffects[i].mesh); } bossEffects = [];
+            for (let i = bossProjectiles.length - 1; i >= 0; i--) { scene.remove(bossProjectiles[i].mesh); } bossProjectiles = [];
+            for (let i = tornados.length - 1; i >= 0; i--) { scene.remove(tornados[i].mesh); } tornados = [];
+            
+            if(boss) { scene.remove(boss.mesh); boss = null; bossHpUI.style.display = 'none'; bossSkillData.active = false; if(bossSkillWarningMesh) { scene.remove(bossSkillWarningMesh); bossSkillWarningMesh = null; } }
+
+            for (let i = skill3Swords.length - 1; i >= 0; i--) { scene.remove(skill3Swords[i].group); } skill3Swords = [];
+            
+            playerGroup.position.set(0, 0, 0); playerBody.rotation.z = 0; playerBody.position.y = 0.8; cameraYaw = 0; cameraPitch = 0.2;
+            
+            isSkill3Active = false; isAimingAOE = false;
+            if(aoeIndicatorGroup) aoeIndicatorGroup.visible = false;
+            if(uiSkill1) uiSkill1.classList.remove('active');
+            if(uiSkill3) uiSkill3.classList.remove('active');
+
+            timerAOE = 0; timerSkill2 = 0; timerPlunge = 0; timerSkill3 = 0;
+            updateCooldownUI(0, CD_AOE_TIME, cdOver1, cdText1); updateCooldownUI(0, CD_SKILL2_TIME, cdOverRMB, cdTextRMB); updateCooldownUI(0, CD_PLUNGE_TIME, cdOver2, cdText2); updateCooldownUI(0, CD_SKILL3_TIME, cdOver3, cdText3);
+            
+            for (let i = tornados.length - 1; i >= 0; i--) { scene.remove(tornados[i].mesh); } tornados = [];
+            activeArrowRains = []; // THÊM DÒNG NÀY ĐỂ DỌN MƯA TÊN
+
+            // Hiện lại màn chọn môn phái
+            document.getElementById('player-profile').style.display = 'none';
+            document.getElementById('instructions').style.display = 'none';
+            document.getElementById('score-board').style.display = 'none';
+            document.getElementById('crosshair').style.display = 'none';
+            document.getElementById('skill-panel').style.display = 'none';
+            classSelectionScreen.style.display = 'flex';
+        }
+
+        function setupControls() {
+            document.addEventListener('contextmenu', event => event.preventDefault());
+            document.getElementById('btn-resume').addEventListener('click', () => { renderer.domElement.requestPointerLock(); });
+            document.getElementById('btn-restart').addEventListener('click', restartGame);
+            document.getElementById('btn-victory-restart').addEventListener('click', restartGame);
+
+            document.addEventListener('pointerlockchange', () => {
+                if (isDead || isVictory || !selectedClass) return;
+                isControlsEnabled = (document.pointerLockElement === renderer.domElement);
+                blocker.style.display = isControlsEnabled ? 'none' : 'flex';
+                if(!isControlsEnabled) { isAimingAOE = false; aoeIndicatorGroup.visible = false; uiSkill1.classList.remove('active'); keys.w = keys.a = keys.s = keys.d = keys.space = false; }
+                previousFrameTime = performance.now(); 
+            });
+
+            window.addEventListener('keydown', (e) => { 
+                if (!isControlsEnabled || isDead || isVictory || !selectedClass) return; const key = e.key.toLowerCase();
+                if (key === '1') { 
+                    if (isGrounded && timerAOE <= 0) { 
+                        if (selectedClass === 'sword' && !isAttacking && !isSkill2Active && !isPlungeActive) {
+                            // Kiếm Tiên: Bổ Trọng Kích ngay lập tức
+                            executeHeavyStrike();
+                        } else if (selectedClass === 'bow' && !isSkill2Active) {
+                            // Tiên Cung: Bật vòng nhắm Mưa Tên
+                            isAimingAOE = !isAimingAOE; aoeIndicatorGroup.visible = isAimingAOE; 
+                            if(isAimingAOE) uiSkill1.classList.add('active'); else uiSkill1.classList.remove('active'); 
+                        }
+                    } 
+                }
+                else if (key === '2') { 
+                    if (selectedClass === 'sword' && !isGrounded && !isPlungeActive && !isSkill2Active && timerPlunge <= 0) startPlungeAttack(); 
+                    else if (selectedClass === 'bow' && isGrounded && !isAttacking && timerPlunge <= 0) shootPiercingArrow();
+                }
+                else if (key === '3') {
+                    if (selectedClass === 'sword' && !isSkill3Active && timerSkill3 <= 0 && isGrounded) startSkill3();
+                    else if (selectedClass === 'bow' && timerSkill3 <= 0 && isGrounded) startTornado();
+                }
+                else { keys[key] = true; }
+            });
+
+            window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+            document.addEventListener('mousemove', (e) => { if (!isControlsEnabled || isDead || isVictory) return; cameraYaw -= e.movementX * mouseSensitivity; cameraPitch -= e.movementY * mouseSensitivity; cameraPitch = Math.max(-Math.PI/3, Math.min(Math.PI/3, cameraPitch)); });
+
+            document.addEventListener('mousedown', (e) => {
+                if (!isControlsEnabled || isDead || isVictory || !selectedClass) return;
+                if (e.button === 0) { 
+                    if (isAimingAOE) { if (isGrounded) castAOESkill(); } 
+                    else if (!isAttacking && !isSkill2Active && !isPlungeActive) {
+                        if (selectedClass === 'sword') performAttack(); else shootArrow();
+                    }
+                }
+                else if (e.button === 2) { 
+                    if (!isAimingAOE && isGrounded && !isSkill2Active && !isAttacking && timerSkill2 <= 0) {
+                        if (selectedClass === 'sword') startSkill2(); else shootMultiArrow();
+                    }
+                }
+            });
+
+            window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+        }
+
+        function updateCooldownUI(timer, maxTime, overEl, textEl) {
+            if (timer <= 0) { overEl.style.display = 'none'; textEl.style.display = 'none'; } 
+            else { const percent = (timer / maxTime) * 100; overEl.style.display = 'block'; overEl.style.setProperty('--cd', percent + '%'); textEl.style.display = 'block'; textEl.innerText = Math.ceil(timer / 1000); }
+        }
+
+        function animate(time) {
+            requestAnimationFrame(animate); 
+            if(!selectedClass) return; // Không render update nếu chưa chọn class
+            
+            const dt = time - previousFrameTime; previousFrameTime = time;
+
+            if (iFrames > 0) { iFrames -= dt; playerBody.material.opacity = (Math.sin(time / 50) > 0) ? 0.3 : 0.8; if (iFrames <= 0) { playerBody.material.opacity = 1.0; document.getElementById('player-profile').style.borderColor = '#555'; } }
+
+            if (isControlsEnabled && !isDead && !isVictory) {
+                
+                if (kills >= KILLS_TO_SPAWN_BOSS && !boss) { spawnBoss(); }
+
+                if (boss) {
+                    boss.halo.rotation.z -= dt * 0.001; 
+                    if (!bossSkillData.active && !bossSkillData.isFiring) {
+                        boss.mesh.lookAt(playerGroup.position.x, boss.mesh.position.y, playerGroup.position.z); boss.mesh.translateZ(boss.speed);
+                        boss.currentCd -= dt;
+                        if (boss.currentCd <= 0) {
+                            bossSkillData.type = Math.floor(Math.random() * 3); 
+                            if (bossSkillData.type === 2) { bossSkillData.isFiring = true; bossSkillData.fireDuration = 3000; bossSkillData.fireTick = 0; boss.currentCd = 6000; } 
+                            else {
+                                bossSkillData.active = true; bossSkillData.timer = 1500; 
+                                if (bossSkillData.type === 0) { 
+                                    bossSkillData.x = playerGroup.position.x; bossSkillData.z = playerGroup.position.z;
+                                    bossSkillWarningMesh = new THREE.Mesh(new THREE.CircleGeometry(7, 64), new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.3, side: THREE.DoubleSide }));
+                                    bossSkillWarningMesh.rotation.x = -Math.PI/2; bossSkillWarningMesh.position.set(bossSkillData.x, 0.1, bossSkillData.z); scene.add(bossSkillWarningMesh);
+                                } else if (bossSkillData.type === 1) { 
+                                    bossSkillWarningMesh = new THREE.Mesh(new THREE.RingGeometry(2.8, 3, 64), new THREE.MeshBasicMaterial({ color: 0xff5500, transparent: true, opacity: 0.3, side: THREE.DoubleSide }));
+                                    bossSkillWarningMesh.rotation.x = -Math.PI/2; bossSkillWarningMesh.position.copy(boss.mesh.position); bossSkillWarningMesh.position.y = 0.1; scene.add(bossSkillWarningMesh);
+                                }
+                            }
+                        }
+                    } 
+                    else if (bossSkillData.active) {
+                        bossSkillData.timer -= dt; 
+                        if(bossSkillWarningMesh) bossSkillWarningMesh.material.opacity = (Math.sin(time / 50) > 0) ? 0.5 : 0.2;
+                        if (bossSkillData.timer <= 0) { executeBossSkill(bossSkillData.type); }
+                    } 
+                    else if (bossSkillData.isFiring) {
+                        bossSkillData.fireDuration -= dt; bossSkillData.fireTick -= dt;
+                        boss.mesh.lookAt(playerGroup.position.x, boss.mesh.position.y, playerGroup.position.z);
+                        if (bossSkillData.fireTick <= 0) { spawnBossProjectile(); bossSkillData.fireTick = 150; }
+                        if (bossSkillData.fireDuration <= 0) { bossSkillData.isFiring = false; }
+                    }
+                }
+
+                if (timerAOE > 0) { timerAOE -= dt; updateCooldownUI(timerAOE, CD_AOE_TIME, cdOver1, cdText1); }
+                if (timerSkill2 > 0) { timerSkill2 -= dt; updateCooldownUI(timerSkill2, CD_SKILL2_TIME, cdOverRMB, cdTextRMB); }
+                if (timerPlunge > 0) { timerPlunge -= dt; updateCooldownUI(timerPlunge, CD_PLUNGE_TIME, cdOver2, cdText2); }
+
+                if (isAimingAOE) {
+                    raycaster.setFromCamera(centerScreen, camera); const intersects = raycaster.intersectObject(ground);
+                    if (intersects.length > 0) {
+                        const hitPos2D = new THREE.Vector3(intersects[0].point.x, 0, intersects[0].point.z), playerPos2D = new THREE.Vector3(playerGroup.position.x, 0, playerGroup.position.z);
+                        if (playerPos2D.distanceTo(hitPos2D) > aoeCastRange) aoeTargetPos.copy(playerPos2D).add(new THREE.Vector3().subVectors(hitPos2D, playerPos2D).normalize().multiplyScalar(aoeCastRange)); else aoeTargetPos.copy(hitPos2D);
+                        aoeIndicatorGroup.position.set(aoeTargetPos.x, 0.05, aoeTargetPos.z);
+                    }
+                }
+
+                if (!boss && time - lastSpawnTime > enemySpawnRate) { spawnEnemy(); lastSpawnTime = time; }
+
+                if (selectedClass === 'sword' && isSkill2Active) {
+                    skill2Timer += 1;
+                    if (skill2Timer === 10) { 
+                        const slash = new THREE.Mesh(new THREE.TorusGeometry(1.8, 0.08, 8, 32, Math.PI * 0.9).rotateZ(-Math.PI * 0.45).rotateX(Math.PI / 2).rotateY(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xbb00ff, emissive: 0xbb00ff, emissiveIntensity: 8, transparent: true, opacity: 0.9, side: THREE.DoubleSide }));
+                        const dir = new THREE.Vector3(-Math.sin(skill2CastYaw), 0, -Math.cos(skill2CastYaw)).normalize(); slash.position.copy(playerGroup.position).add(new THREE.Vector3(0, 1.0, 0)).addScaledVector(dir, 0.8); slash.rotation.z = 0.2; slash.lookAt(slash.position.clone().add(dir)); slashes.push({ mesh: slash, direction: dir.clone(), life: 0.8, speed: 0.5, hitTargets: new Set(), damage: 30, isArrow: false }); scene.add(slash);
+                    }
+                    if (skill2Timer === 30) { 
+                        const slash = new THREE.Mesh(new THREE.TorusGeometry(1.8, 0.08, 8, 32, Math.PI * 0.9).rotateZ(-Math.PI * 0.45).rotateX(Math.PI / 2).rotateY(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xffcc00, emissive: 0xffcc00, emissiveIntensity: 8, transparent: true, opacity: 0.9, side: THREE.DoubleSide }));
+                        const dir = new THREE.Vector3(-Math.sin(skill2CastYaw), 0, -Math.cos(skill2CastYaw)).normalize(); slash.position.copy(playerGroup.position).add(new THREE.Vector3(0, 1.0, 0)).addScaledVector(dir, 0.8); slash.rotation.z = -0.2; slash.lookAt(slash.position.clone().add(dir)); slashes.push({ mesh: slash, direction: dir.clone(), life: 0.8, speed: 0.5, hitTargets: new Set(), damage: 40, isArrow: false }); scene.add(slash);
+                    }
+                    if (skill2Timer === 55) { 
+                        const slash = new THREE.Mesh(new THREE.TorusGeometry(1.8, 0.08, 8, 32, Math.PI * 0.9).rotateZ(-Math.PI * 0.45).rotateX(Math.PI / 2).rotateY(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xff0033, emissive: 0xff0033, emissiveIntensity: 8, transparent: true, opacity: 0.9, side: THREE.DoubleSide }));
+                        const dir = new THREE.Vector3(-Math.sin(skill2CastYaw), 0, -Math.cos(skill2CastYaw)).normalize(); slash.position.copy(playerGroup.position).add(new THREE.Vector3(0, 1.0, 0)).addScaledVector(dir, 0.8); slash.rotation.x = Math.PI/2; slash.scale.set(1.5, 1.5, 1); slash.lookAt(slash.position.clone().add(dir)); slashes.push({ mesh: slash, direction: dir.clone(), life: 0.8, speed: 0.5, hitTargets: new Set(), damage: 100, isArrow: false }); scene.add(slash);
+                    }
+                    if (skill2Timer > 90) isSkill2Active = false;
+                }
+
+                if (selectedClass === 'sword' && isPlungeActive) {
+                    if (plungePhase === 0) { plungeTimer++; velocityY = 0.25; if (plungeTimer % 3 === 0) spawnTrail(playerGroup.position); if (plungeTimer > 12) { plungePhase = 1; plungeTimer = 0; } } 
+                    else if (plungePhase === 1) { plungeTimer++; velocityY = -gravity; playerGroup.position.addScaledVector(plungeDir, 0.6); if (plungeTimer % 2 === 0) spawnTrail(playerGroup.position); if (plungeTimer > 10) { plungePhase = 2; velocityY = -0.6; } } 
+                    else if (plungePhase === 2) { velocityY -= 0.15; spawnTrail(playerGroup.position); }
+                }
+
+                if (selectedClass === 'sword' && isSkill3Active) {
+                    skill3DurationTimer -= dt; skill3AttackTick -= dt;
+                    skill3Swords.forEach((swordData) => {
+                        const angle = (time * 0.003) + (swordData.baseIndex * Math.PI / 2); const radius = 2.5;
+                        const orbitPos = new THREE.Vector3(playerGroup.position.x + Math.cos(angle) * radius, playerGroup.position.y + 1.5 + Math.sin(time*0.005 + swordData.baseIndex)*0.2, playerGroup.position.z + Math.sin(angle) * radius);
+                        if (swordData.state === 'orbit') {
+                            swordData.group.position.lerp(orbitPos, 0.1); const moveDir = new THREE.Vector3(-Math.sin(angle), 0, Math.cos(angle)).normalize(); swordData.group.lookAt(swordData.group.position.clone().add(moveDir));
+                        } else if (swordData.state === 'attack') {
+                            if (swordData.target && swordData.target.hp > 0) {
+                                const aimPos = new THREE.Vector3((swordData.target.mesh ? swordData.target.mesh.position.x : swordData.target.position.x), (swordData.target.mesh ? swordData.target.mesh.position.y : swordData.target.position.y) + 0.5, (swordData.target.mesh ? swordData.target.mesh.position.z : swordData.target.position.z));
+                                const dir = new THREE.Vector3().subVectors(aimPos, swordData.group.position).normalize();
+                                swordData.group.position.addScaledVector(dir, 0.8); swordData.group.lookAt(aimPos); 
+                                if (swordData.group.position.distanceTo(aimPos) < 1.5) {
+                                    if (swordData.target === boss) { damageBoss(15); } else {
+                                        const enemy = swordData.target; enemy.hp -= 15; spawnDamageText(15, aimPos, false); spawnBlood(aimPos);
+                                        if (enemy.hp <= 0) { const eIdx = enemies.indexOf(enemy); if (eIdx > -1) { scene.remove(enemy.mesh); scene.remove(enemy.healthGroupNode); enemies.splice(eIdx, 1); kills++; killCountElement.innerText = kills; } } else { enemy.healthBarNode.scale.x = Math.max(0, enemy.hp / enemy.maxHp); }
+                                    } swordData.state = 'return'; 
+                                }
+                            } else { swordData.state = 'return'; }
+                        } else if (swordData.state === 'return') {
+                            const dir = new THREE.Vector3().subVectors(orbitPos, swordData.group.position).normalize(); swordData.group.position.addScaledVector(dir, 0.6); swordData.group.lookAt(orbitPos);
+                            if (swordData.group.position.distanceTo(orbitPos) < 1.0) { swordData.state = 'orbit'; }
+                        }
+                    });
+                    if (skill3AttackTick <= 0) {
+                        skill3AttackTick = 500; let target = null; let minDist = 20; 
+                        enemies.forEach(e => { const d = playerGroup.position.distanceTo(e.mesh.position); if (d < minDist) { minDist = d; target = e; } });
+                        if (boss && playerGroup.position.distanceTo(boss.mesh.position) < minDist) { target = boss; }
+                        if (target) { const readySword = skill3Swords.find(s => s.state === 'orbit'); if (readySword) { readySword.state = 'attack'; readySword.target = target; } }
+                    }
+                    if (skill3DurationTimer <= 0) { isSkill3Active = false; skill3Swords.forEach(s => scene.remove(s.group)); skill3Swords = []; timerSkill3 = CD_SKILL3_TIME; uiSkill3.classList.remove('active'); }
+                } else if (selectedClass === 'sword' && timerSkill3 > 0) { timerSkill3 -= dt; updateCooldownUI(timerSkill3, CD_SKILL3_TIME, cdOver3, cdText3); }
+
+                // TORNADO CỦA CUNG THỦ
+                if (selectedClass === 'bow') {
+                    if (timerSkill3 > 0) { timerSkill3 -= dt; updateCooldownUI(timerSkill3, CD_SKILL3_TIME, cdOver3, cdText3); }
+                    
+                    // 1. TORNADO (Gây sát thương và Hất tung)
+                    for(let i = tornados.length - 1; i >= 0; i--) {
+                        let tor = tornados[i];
+                        tor.life -= dt / 1000;
+                        tor.tick -= dt; // Trừ dần thời gian chờ
+                        tor.mesh.rotation.y += 0.5; // Xoay lốc
+                        tor.mesh.position.addScaledVector(tor.direction, tor.speed);
+                        
+                        // Cứ mỗi 0.5 giây (500ms) sẽ giật sát thương 1 lần
+                        if (tor.tick <= 0) {
+                            tor.tick = 500;
+                            const torRadius = 4.0;
+                            
+                            // FIX: Ép tọa độ tâm Lốc Xoáy xuống mặt đất để đo 2D
+                            const torPos2D = new THREE.Vector3(tor.mesh.position.x, 0, tor.mesh.position.z);
+
+                            for (let j = enemies.length - 1; j >= 0; j--) {
+                                let enemy = enemies[j];
+                                // Ép tọa độ Quái xuống mặt đất để đo 2D
+                                const enemyPos2D = new THREE.Vector3(enemy.mesh.position.x, 0, enemy.mesh.position.z);
+                                
+                                if (torPos2D.distanceTo(enemyPos2D) <= torRadius) {
+                                    enemy.hp -= 15; 
+                                    spawnDamageText(15, enemy.mesh.position, false); 
+                                    spawnBlood(enemy.mesh.position);
+                                    
+                                    // HIỆU ỨNG HẤT TUNG: Nấc quái lên cao 2m
+                                    enemy.mesh.position.y = 2.0;
+
+                                    if (enemy.hp <= 0) { 
+                                        scene.remove(enemy.mesh); scene.remove(enemy.healthGroupNode); 
+                                        enemies.splice(j, 1); kills++; killCountElement.innerText = kills; 
+                                    } else {
+                                        enemy.healthBarNode.scale.x = Math.max(0, enemy.hp / enemy.maxHp);
+                                    }
+                                }
+                            }
+                            
+                            if (boss) {
+                                const bossPos2D = new THREE.Vector3(boss.mesh.position.x, 0, boss.mesh.position.z);
+                                if (torPos2D.distanceTo(bossPos2D) <= torRadius) { 
+                                    damageBoss(20); 
+                                }
+                            }
+                        }
+
+                        if (tor.life <= 0) { scene.remove(tor.mesh); tornados.splice(i, 1); }
+                    }
+
+                    // 2. MƯA TÊN LIÊN TỤC (3 GIÂY)
+                    for (let i = activeArrowRains.length - 1; i >= 0; i--) {
+                        let rain = activeArrowRains[i];
+                        rain.duration -= dt;
+                        rain.spawnTick -= dt;
+                        rain.damageTick -= dt;
+
+                        // Hiệu ứng rớt mũi tên liên tục mỗi 100ms
+                        if (rain.spawnTick <= 0) {
+                            for(let k=0; k<2; k++) {
+                                const arrow = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2), new THREE.MeshBasicMaterial({color: 0x33ff55}));
+                                const offsetX = (Math.random()-0.5) * aoeNormalRadius * 2;
+                                const offsetZ = (Math.random()-0.5) * aoeNormalRadius * 2;
+                                arrow.position.set(rain.x + offsetX, 15 + Math.random()*5, rain.z + offsetZ);
+                                scene.add(arrow);
+                                aoeEffects.push({ mesh: arrow, life: 1.0, scaleSpeed: 0, isFallingArrow: true });
+                            }
+                            rain.spawnTick = 100;
+                        }
+
+                        // Gây sát thương liên tục lên quái trong vùng (Mỗi 0.5 giây)
+                        if (rain.damageTick <= 0) {
+                            const targetVec = new THREE.Vector3(rain.x, 0, rain.z);
+                            for (let j = enemies.length - 1; j >= 0; j--) {
+                                let enemy = enemies[j];
+                                if (targetVec.distanceTo(enemy.mesh.position) <= aoeNormalRadius) {
+                                    enemy.hp -= 15; // Giật 15 máu/lần
+                                    spawnDamageText(15, enemy.mesh.position, false); 
+                                    spawnBlood(enemy.mesh.position);
+                                    if (enemy.hp <= 0) { 
+                                        scene.remove(enemy.mesh); scene.remove(enemy.healthGroupNode); 
+                                        enemies.splice(j, 1); kills++; killCountElement.innerText = kills; 
+                                    } else {
+                                        enemy.healthBarNode.scale.x = Math.max(0, enemy.hp / enemy.maxHp);
+                                    }
+                                }
+                            }
+                            if (boss && targetVec.distanceTo(boss.mesh.position) <= aoeNormalRadius) { 
+                                damageBoss(30); // Giật 30 máu/lần lên Boss
+                            }
+                            rain.damageTick = 500;
+                        }
+
+                        if (rain.duration <= 0) {
+                            activeArrowRains.splice(i, 1);
+                        }
+                    }
+                }
+
+                if (!isSkill2Active && !isPlungeActive) {
+                    const camDir = new THREE.Vector3(); camera.getWorldDirection(camDir); camDir.y = 0; camDir.normalize();
+                    const camRight = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), camDir);
+                    if (keys.w) playerGroup.position.addScaledVector(camDir, moveSpeed); if (keys.s) playerGroup.position.addScaledVector(camDir, -moveSpeed);
+                    if (keys.a) playerGroup.position.addScaledVector(camRight, moveSpeed); if (keys.d) playerGroup.position.addScaledVector(camRight, -moveSpeed);
+                    if (keys[' '] && isGrounded) { velocityY = jumpStrength; isGrounded = false; if (isAimingAOE) { isAimingAOE = false; aoeIndicatorGroup.visible = false; uiSkill1.classList.remove('active'); } }
+                    playerBody.rotation.y = cameraYaw + Math.PI;
+                }
+
+                // Animation Vũ khí
+                if (isAttacking) { 
+                    attackProgress += attackSpeed; 
+                    if (selectedClass === 'sword') {
+                        swordPivot.rotation.x = (Math.PI / 4) - (Math.sin(attackProgress) * Math.PI * 0.8); 
+                        swordPivot.rotation.z = Math.sin(attackProgress) * (Math.PI / 3); 
+                        
+                        // CÚ CHÓT: Mới vung kiếm được 1 nửa (chạm đất) thì NỔ SÁT THƯƠNG
+                        if (pendingHeavyStrike && attackProgress >= Math.PI / 2) {
+                            triggerHeavyStrikeDamage(heavyStrikeDir);
+                            pendingHeavyStrike = false; // Tắt cờ
+                        }
+
+                        if (attackProgress >= Math.PI) { 
+                            isAttacking = false; 
+                            swordPivot.rotation.set(Math.PI / 4, 0, 0); 
+                            attackSpeed = 0.18; // Reset tốc độ chém
+                        } 
+                    } else {
+                        // Animation kéo cung
+                        bowPivot.position.z = 0.5 - Math.sin(attackProgress) * 0.2;
+                        if (attackProgress >= Math.PI) { 
+                            isAttacking = false; 
+                            bowPivot.position.z = 0.5; 
+                            attackSpeed = 0.18; 
+                        } 
+                    }
+                }
+
+                // Xử lý Slashes / Arrows
+                for (let i = slashes.length - 1; i >= 0; i--) {
+                    let s = slashes[i]; s.mesh.position.addScaledVector(s.direction, s.speed); 
+                    if (s.isArrow || s.isPiercing) {
+                        s.life -= dt / 1000;
+                    } else {
+                        s.life -= 0.02; s.mesh.material.opacity = s.life; s.mesh.scale.multiplyScalar(1.02); 
+                    }
+                    
+                    for (let j = enemies.length - 1; j >= 0; j--) {
+                        let enemy = enemies[j];
+                        if (s.mesh.position.distanceTo(enemy.mesh.position) < 2.5 && !s.hitTargets.has(enemy)) {
+                            s.hitTargets.add(enemy); const dmg = s.damage || 10; enemy.hp -= dmg; spawnDamageText(dmg, enemy.mesh.position, dmg > 10); spawnBlood(enemy.mesh.position);
+                            if (enemy.hp <= 0) { scene.remove(enemy.mesh); scene.remove(enemy.healthGroupNode); enemies.splice(j, 1); kills++; killCountElement.innerText = kills; } else enemy.healthBarNode.scale.x = Math.max(0, enemy.hp / enemy.maxHp);
+                            if(s.isArrow && !s.isPiercing) s.life = 0; // Mũi tên thường chạm 1 con là biến mất
+                        }
+                    }
+
+                    if (boss && s.mesh.position.distanceTo(boss.mesh.position) < boss.hitRadius && !s.hitTargets.has(boss)) { 
+                        s.hitTargets.add(boss); damageBoss(s.damage || 10); 
+                        if(s.isArrow && !s.isPiercing) s.life = 0; 
+                    }
+                    if (s.life <= 0) { scene.remove(s.mesh); slashes.splice(i, 1); }
+                }
+
+                enemies.forEach((enemy) => {
+                    enemy.mesh.lookAt(playerGroup.position.x, enemy.mesh.position.y, playerGroup.position.z); 
+                    enemy.mesh.translateZ(enemy.speed);
+                    
+                    // FIX: Nếu quái đang lơ lửng trên không (bị hất tung) thì cho rơi rầm xuống đất
+                    if (enemy.mesh.position.y > 0) {
+                        enemy.mesh.position.y -= 0.1;
+                        if (enemy.mesh.position.y < 0) enemy.mesh.position.y = 0;
+                    }
+
+                    enemy.healthGroupNode.position.copy(enemy.mesh.position); 
+                    enemy.healthGroupNode.position.y += 1.4; 
+                    enemy.healthGroupNode.quaternion.copy(camera.quaternion);
+                    
+                    if (iFrames <= 0 && playerGroup.position.distanceTo(enemy.mesh.position) < 1.2) takePlayerDamage(enemy.damage);
+                });
+
+                for (let i = bossEffects.length - 1; i >= 0; i--) {
+                    let effect = bossEffects[i]; effect.life -= 0.03; 
+                    if (effect.type === 0) { effect.mesh.scale.x += 0.02; effect.mesh.scale.z += 0.02; } 
+                    else if (effect.type === 1) { effect.radius += 0.35; effect.mesh.scale.set(effect.radius, effect.radius, 1); if (iFrames <= 0 && playerGroup.position.y <= 0.5) { const dist = playerGroup.position.distanceTo(effect.mesh.position); if (Math.abs(dist - effect.radius) < 1.5) takePlayerDamage(50); } } 
+                    effect.mesh.material.opacity = effect.life; if (effect.life <= 0) { scene.remove(effect.mesh); bossEffects.splice(i, 1); } 
+                }
+
+                for (let i = bossProjectiles.length - 1; i >= 0; i--) {
+                    let p = bossProjectiles[i]; p.mesh.position.addScaledVector(p.dir, p.speed); p.mesh.rotation.x += 0.2; p.mesh.rotation.y += 0.2; p.life -= dt / 1000;
+                    if (iFrames <= 0) { const dist = p.mesh.position.distanceTo(new THREE.Vector3(playerGroup.position.x, playerGroup.position.y + 0.8, playerGroup.position.z)); if (dist < 1.2) { takePlayerDamage(15); scene.remove(p.mesh); bossProjectiles.splice(i, 1); continue; } }
+                    if (p.life <= 0) { scene.remove(p.mesh); bossProjectiles.splice(i, 1); }
+                }
+
+                for (let i = aoeEffects.length - 1; i >= 0; i--) { 
+                    let effect = aoeEffects[i]; 
+                    if (effect.isFallingArrow) {
+                        effect.mesh.position.y -= 0.8; // Mưa rơi xuống
+                        effect.life -= dt / 1000;
+                    } else {
+                        effect.life -= 0.03; effect.mesh.scale.x += effect.scaleSpeed; effect.mesh.scale.z += effect.scaleSpeed; effect.mesh.material.opacity = effect.life; 
+                    }
+                    if (effect.life <= 0 || effect.mesh.position.y < 0) { scene.remove(effect.mesh); aoeEffects.splice(i, 1); } 
+                }
+
+                for (let i = particles.length - 1; i >= 0; i--) { let p = particles[i]; p.velocity.y += gravity; p.mesh.position.add(p.velocity); p.life -= 0.02; const scale = Math.max(0, p.life); p.mesh.scale.set(scale, scale, scale); if (p.life <= 0 || p.mesh.position.y < 0) { scene.remove(p.mesh); particles.splice(i, 1); } }
+                
+                velocityY += gravity; playerGroup.position.y += velocityY; 
+                if (playerGroup.position.y <= 0) { 
+                    playerGroup.position.y = 0; velocityY = 0; isGrounded = true; 
+                    if (selectedClass === 'sword' && isPlungeActive) { executePlungeSmash(); isPlungeActive = false; }
+                }
+            }
+
+            // Camera update (Luôn chạy kể cả ở màn hình Class)
+            if (playerGroup) {
+                const offset = new THREE.Vector3(0, 0, cameraRadius).applyAxisAngle(new THREE.Vector3(1, 0, 0), cameraPitch).applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraYaw);
+                camera.position.copy(playerGroup.position).add(offset).add(new THREE.Vector3(0, 1.5, 0)); camera.lookAt(playerGroup.position.x, playerGroup.position.y + 1.5, playerGroup.position.z);
+            }
+
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                let ft = floatingTexts[i]; ft.pos.add(ft.velocity); ft.life -= 0.02; let tempV = ft.pos.clone().project(camera); 
+                if (ft.life <= 0 || tempV.z > 1) { ft.element.remove(); floatingTexts.splice(i, 1); } 
+                else { const x = (tempV.x * .5 + .5) * window.innerWidth; const y = (tempV.y * -.5 + .5) * window.innerHeight; ft.element.style.left = x + 'px'; ft.element.style.top = y + 'px'; ft.element.style.opacity = ft.life; } 
+            }
+
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>

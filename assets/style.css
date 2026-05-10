@@ -1,0 +1,745 @@
+body {
+    margin: 0;
+    overflow: hidden;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: #070b19;
+    cursor: crosshair;
+}
+
+canvas {
+    display: block;
+}
+
+.stats-col {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.hp-container {
+    width: 200px;
+    height: 18px;
+    background: #440000;
+    border: 2px solid #222;
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+}
+
+.hp-fill {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #00aa00, #00ff00);
+    transition: width 0.2s ease-out;
+}
+
+.hp-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-weight: bold;
+    font-size: 11px;
+    text-shadow: 1px 1px 0 #000;
+}
+
+.stat-details {
+    color: #00ffff;
+    font-size: 12px;
+    font-weight: bold;
+    text-shadow: 1px 1px 0 #000;
+    display: flex;
+    gap: 10px;
+}
+
+#player-profile {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 8px 15px 8px 8px;
+    border-radius: 30px 10px 10px 30px;
+    border: 2px solid #555;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+    z-index: 10;
+}
+
+.avatar {
+    width: 50px;
+    height: 50px;
+    background: #222;
+    border: 2px solid #00ffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+}
+
+#boss-ui {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    z-index: 10;
+    pointer-events: none;
+    width: 600px;
+}
+
+#boss-name {
+    color: #ff3333;
+    font-size: 24px;
+    font-weight: 900;
+    text-shadow: 2px 2px 0 #000;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+}
+
+.boss-hp-bg {
+    width: 100%;
+    height: 25px;
+    background: #220000;
+    border: 3px solid #111;
+    border-radius: 4px;
+    position: relative;
+}
+
+.boss-hp-fill {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #aa0000, #ff0000);
+    transition: width 0.2s;
+}
+
+.boss-hp-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+    text-shadow: 1px 1px 0 #000;
+}
+
+#boss-warning {
+    position: absolute;
+    top: 30%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #ff0000;
+    font-size: 50px;
+    font-weight: 900;
+    text-shadow: 4px 4px 10px #000;
+    animation: flashWarning 0.5s infinite;
+    display: none;
+    z-index: 100;
+    pointer-events: none;
+    text-align: center;
+    width: 100%;
+}
+
+@keyframes flashWarning {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    50% {
+        opacity: 0.5;
+        transform: translate(-50%, -50%) scale(1.1);
+        color: #fff;
+    }
+}
+
+#instructions {
+    position: absolute;
+    top: 90px;
+    left: 15px;
+    background: rgba(0, 0, 0, 0.85);
+    border: 2px solid #333;
+    border-radius: 10px;
+    padding: 15px;
+    pointer-events: none;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 250px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+}
+
+#instr-title {
+    margin: 0;
+    color: #00ffff;
+    font-size: 20px;
+    text-transform: uppercase;
+    border-bottom: 1px solid #444;
+    padding-bottom: 8px;
+    text-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+}
+
+.instr-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.instr-list li {
+    color: #ccc;
+    font-size: 13px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 6px 10px;
+    border-radius: 5px;
+}
+
+.instr-list b {
+    color: #fff;
+    float: right;
+}
+
+.instr-goal {
+    color: #ffaa00;
+    font-size: 13px;
+    font-weight: bold;
+    text-align: center;
+    background: rgba(255, 170, 0, 0.15);
+    padding: 8px;
+    border-radius: 5px;
+    border: 1px dashed rgba(255, 170, 0, 0.5);
+}
+
+#score-board { 
+    position: absolute; top: 15px; right: 15px; 
+    color: white; background: rgba(0, 0, 0, 0.8); 
+    padding: 10px 20px; border-radius: 8px; 
+    border: 1px solid #ff3333; font-size: 24px; font-weight: bold; 
+    pointer-events: none; z-index: 10; display: flex; 
+    
+    /* Bật tính năng giống Horizontal Layout Group của Unity */
+    align-items: center; 
+    gap: 8px; 
+}
+
+#kill-count { 
+    color: #ff3333; font-size: 32px; 
+    line-height: 1; /* Loại bỏ khoảng trắng thừa của text size lớn */
+}
+
+.screen-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    color: #00ffff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 28px;
+    z-index: 20;
+    flex-direction: column;
+    text-align: center;
+}
+
+.btn {
+    padding: 12px 40px;
+    border: 2px solid #00ffff;
+    color: #00ffff;
+    background: transparent;
+    cursor: pointer;
+    font-size: 22px;
+    font-weight: bold;
+    transition: all 0.3s;
+    margin-top: 20px;
+    text-transform: uppercase;
+}
+
+.btn:hover {
+    background: #00ffff;
+    color: #000;
+}
+
+#class-selection {
+    z-index: 30;
+}
+
+.class-container {
+    display: flex;
+    gap: 40px;
+    margin-top: 30px;
+}
+
+.class-card {
+    background: #111;
+    border: 2px solid #555;
+    border-radius: 15px;
+    padding: 20px;
+    width: 300px;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-align: center;
+}
+
+.class-card:hover {
+    transform: translateY(-10px);
+    border-color: #00ffff;
+    box-shadow: 0 15px 30px rgba(0, 255, 255, 0.2);
+}
+
+.class-icon {
+    font-size: 60px;
+    margin-bottom: 10px;
+}
+
+.class-title {
+    color: #00ffff;
+    font-size: 28px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.class-desc {
+    color: #aaa;
+    font-size: 16px;
+    line-height: 1.5;
+    text-align: left;
+}
+
+.class-desc ul {
+    padding-left: 20px;
+    margin-top: 10px;
+}
+
+#game-over-screen,
+#victory-screen {
+    z-index: 50;
+}
+
+#game-over-screen {
+    display: none;
+    background: rgba(50, 0, 0, 0.9);
+    color: #ff3333;
+}
+
+#game-over-screen .btn {
+    border-color: #ff3333;
+    color: #ff3333;
+}
+
+#game-over-screen .btn:hover {
+    background: #ff3333;
+    color: #000;
+}
+
+#victory-screen {
+    display: none;
+    background: rgba(0, 50, 0, 0.9);
+    color: #00ff00;
+}
+
+#victory-screen .btn {
+    border-color: #00ff00;
+    color: #00ff00;
+}
+
+#victory-screen .btn:hover {
+    background: #00ff00;
+    color: #000;
+}
+
+.floating-damage {
+    position: absolute;
+    color: #ffcc00;
+    font-size: 28px;
+    font-weight: 900;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    z-index: 100;
+    text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000;
+    font-style: italic;
+    transition: opacity 0.1s;
+}
+
+.floating-damage.player-dmg {
+    color: #ff0000;
+    font-size: 32px;
+    font-style: normal;
+}
+
+#skill-panel {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 30px;
+    align-items: flex-end;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.skill-group {
+    display: flex;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 10px;
+    border-radius: 10px;
+    border: 2px solid #333;
+}
+
+.skill-slot {
+    width: 50px;
+    height: 50px;
+    background: #222;
+    border: 2px solid #555;
+    border-radius: 6px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    overflow: hidden;
+}
+
+.skill-slot .hotkey {
+    position: absolute;
+    top: 2px;
+    left: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    color: #00ffff;
+    text-shadow: 1px 1px 0 #000;
+    z-index: 2;
+}
+
+.cooldown-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: conic-gradient(rgba(0, 0, 0, 0.8) var(--cd, 0%), transparent 0);
+    z-index: 3;
+    display: none;
+}
+
+.cooldown-text {
+    position: absolute;
+    font-size: 22px;
+    font-weight: 900;
+    color: #fff;
+    z-index: 4;
+    display: none;
+}
+
+/* Container chung */
+#menu-overlay {
+    display: none; 
+    justify-content: center; 
+    align-items: center; /* Đổi stretch thành center */
+}
+
+.eq-panel, .inv-panel {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+/* Style cho panel Túi đồ */
+.inv-panel {
+    background: #0a111a;
+    border: 3px solid #554400;
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 0 30px rgba(255, 170, 0, 0.15), inset 0 0 20px #000;
+}
+
+.inv-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 60px); /* 5 cột */
+    grid-gap: 10px;
+}
+
+.inv-slot {
+    width: 60px;
+    height: 60px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 2px solid #333;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.inv-slot:hover {
+    border-color: #ffaa00;
+    background: #2a2200;
+}
+
+/* --- HỆ THỐNG TRANG BỊ (EQUIPMENT) --- */
+.eq-panel {
+    background: #0a0f1a;
+    border: 3px solid #005555;
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 0 30px rgba(0, 255, 255, 0.2), inset 0 0 20px #000;
+}
+
+.eq-layout {
+    display: flex;
+    gap: 30px;
+    align-items: center;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.eq-col {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.eq-center-col {
+    align-items: center;
+    justify-content: space-between;
+    height: 100%;
+}
+
+.eq-character-model {
+    width: 150px;
+    height: 250px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px dashed #333;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 80px;
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+}
+
+.eq-slot {
+    width: 60px;
+    height: 60px;
+    background: #111;
+    border: 2px solid #444;
+    border-radius: 8px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.eq-slot:hover {
+    border-color: #00ffff;
+    background: #1a2a3a;
+}
+
+.eq-slot.locked {
+    border-color: #ffaa00; /* Khung vàng cho vũ khí bản mệnh */
+    box-shadow: 0 0 10px rgba(255, 170, 0, 0.3);
+}
+
+/* Hiển thị tên trang bị mờ mờ ở trong slot khi trống */
+.eq-slot:empty::before {
+    content: attr(data-name);
+    position: absolute;
+    color: #444;
+    font-size: 11px;
+    text-transform: uppercase;
+    text-align: center;
+    font-weight: bold;
+    pointer-events: none;
+}
+
+/* Tìm đến class .eq-character-model và update lại */
+.eq-character-model {
+    width: 150px; /* Bạn có thể điều chỉnh độ rộng này theo UI mới của bạn */
+    height: 250px; /* Độ cao cho hình placeholder con người đứng */
+    background: rgba(0, 0, 0, 0.3); /* Nền tối nhẹ để nổi bật placeholder */
+    border: 2px dashed #00aaaa; /* Viền nét đứt màu cyan mờ */
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden; /* Đảm bảo hình SVG không tràn ra ngoài */
+    padding: 10px; /* Khoảng thở để hình người không chạm viền */
+}
+
+/* --- STYLE CHO TAB NHẪN CHỨA ĐỒ --- */
+.inv-tabs {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    justify-content: center;
+}
+
+.inv-tab {
+    padding: 8px 15px;
+    background: #111;
+    border: 2px solid #333;
+    border-radius: 6px;
+    color: #888;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.inv-tab:hover:not(.locked) {
+    background: #222;
+    border-color: #ffaa00;
+    color: #fff;
+}
+
+/* Tab đang được chọn */
+.inv-tab.active {
+    background: #2a2200;
+    border-color: #ffaa00;
+    color: #ffaa00;
+    box-shadow: 0 0 10px rgba(255, 170, 0, 0.3);
+}
+
+/* Tab đang bị khóa (Chưa đeo nhẫn) */
+.inv-tab.locked {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: #222;
+    background: #000;
+}
+
+.inv-slot { position: relative; }
+.item-count {
+    position: absolute; bottom: 2px; right: 5px;
+    font-size: 12px; color: white; font-weight: bold;
+    text-shadow: 1px 1px 0 #000;
+}
+
+/* --- QUẢN LÝ SCENE --- */
+.scene {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* Rất quan trọng: cho phép click xuyên qua lớp này xuống gameCanvas */
+    z-index: 5;
+}
+
+.scene > * {
+    pointer-events: auto; /* Khôi phục lại click cho các cửa sổ UI bên trong */
+}
+
+/* --- MAIN MENU & SAVE LOAD --- */
+.game-title-main {
+    font-size: 100px;
+    color: #00ffff;
+    text-shadow: 0 0 30px #00ffff, 5px 5px 0 #004444;
+    margin-bottom: 50px;
+    letter-spacing: 15px;
+    animation: titleGlow 2s infinite alternate;
+}
+
+@keyframes titleGlow {
+    from { text-shadow: 0 0 20px #00ffff; }
+    to { text-shadow: 0 0 60px #00ffff, 0 0 20px #fff; }
+}
+
+.menu-btn-group {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.main-btn {
+    width: 300px;
+    letter-spacing: 2px;
+}
+
+.save-slot-container {
+    display: flex;
+    gap: 30px;
+}
+
+.save-slot {
+    width: 250px;
+    height: 320px;
+    background: rgba(0, 20, 20, 0.8);
+    border: 3px solid #008888;
+    border-radius: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    padding: 20px;
+    box-sizing: border-box;
+    position: relative;
+}
+
+.save-slot:hover {
+    border-color: #00ffff;
+    background: rgba(0, 40, 40, 0.9);
+    transform: translateY(-10px);
+    box-shadow: 0 0 30px rgba(0, 255, 255, 0.4);
+}
+
+.save-slot.empty {
+    border-style: dashed;
+    color: #555;
+}
+
+.slot-name { font-weight: bold; font-size: 22px; margin-bottom: 10px; color: #00ffff; text-shadow: 0 0 5px #00ffff; }
+.slot-info { font-size: 16px; color: #ccc; text-align: center; line-height: 1.8; }
+
+.delete-save-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(200, 0, 0, 0.7);
+    color: white;
+    border: 2px solid #ff3333;
+    border-radius: 5px;
+    width: 30px;
+    height: 30px;
+    font-size: 12px;
+    cursor: pointer;
+    opacity: 0; /* Tàng hình mặc định */
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.delete-save-btn:hover {
+    background: rgba(255, 0, 0, 1);
+    transform: scale(1.1);
+}
+
+/* KHI HOVER VÀO Ô SAVE THÌ HIỆN NÚT XÓA */
+.save-slot:hover .delete-save-btn {
+    opacity: 1;
+}
