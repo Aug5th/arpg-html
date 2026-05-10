@@ -12,15 +12,14 @@ export class Renderer {
 
         ctx.save(); ctx.translate(-state.camX, -state.camY);
 
-        // Lưới nền
-        const grid = VISUAL_CONFIG.gridSize; // Lấy kích thước lưới từ Data
-
-        ctx.strokeStyle = VISUAL_CONFIG.gridColor; // Lấy màu sắc từ Data
+        // ==========================================
+        // LAYER 1: LƯỚI NỀN
+        // ==========================================
+        const grid = VISUAL_CONFIG.gridSize;
+        ctx.strokeStyle = VISUAL_CONFIG.gridColor;
         ctx.lineWidth = 1;
-
         const startX = Math.floor(state.camX / grid) * grid;
         const startY = Math.floor(state.camY / grid) * grid;
-
         ctx.beginPath();
         for (let x = startX; x < startX + this.canvas.width + grid; x += grid) {
             ctx.moveTo(x, state.camY);
@@ -32,7 +31,167 @@ export class Renderer {
         }
         ctx.stroke();
 
-        // VFX đất
+        // ==========================================
+        // LAYER 2: MÔI TRƯỜNG MAP (PHẢI VẼ DƯỚI QUÁI VẬT)
+        // ==========================================
+        if (state.currentMap === 'village') {
+            const env = state.villageEnv;
+            ctx.strokeStyle = '#1a3300';
+            ctx.lineWidth = 2;
+            env.grass.forEach(g => {
+                ctx.beginPath();
+                ctx.moveTo(g.x, g.y); ctx.lineTo(g.x - 5, g.y - 10);
+                ctx.moveTo(g.x, g.y); ctx.lineTo(g.x + 5, g.y - 10);
+                ctx.stroke();
+            });
+            env.trees.forEach(t => {
+                ctx.fillStyle = '#4d2600';
+                ctx.fillRect(t.x - 10, t.y, 20, 40);
+                ctx.beginPath();
+                ctx.arc(t.x, t.y - 20, 40, 0, Math.PI * 2);
+                ctx.fillStyle = '#004d00';
+                ctx.fill();
+            });
+            env.houses.forEach(h => {
+                ctx.fillStyle = '#804000';
+                ctx.fillRect(h.x - 60, h.y, 120, 80);
+                ctx.beginPath();
+                ctx.moveTo(h.x - 80, h.y);
+                ctx.lineTo(h.x, h.y - 60);
+                ctx.lineTo(h.x + 80, h.y);
+                ctx.fillStyle = '#4d0000';
+                ctx.fill();
+                ctx.fillStyle = '#000';
+                ctx.fillRect(h.x - 10, h.y + 40, 20, 30);
+            });
+            ctx.beginPath();
+            ctx.arc(state.npc.x, state.npc.y, state.npc.size / 2, 0, Math.PI * 2);
+            ctx.fillStyle = '#cccccc';
+            ctx.fill();
+            ctx.font = `${state.blacksmith.size}px Arial`;
+            ctx.fillText('🧔', state.blacksmith.x, state.blacksmith.y);
+            ctx.fillStyle = '#ff4444';
+            ctx.font = '14px Arial';
+            ctx.fillText(state.blacksmith.name, state.blacksmith.x, state.blacksmith.y - 35);
+            ctx.font = '20px Arial';
+            ctx.fillText('🔨', state.blacksmith.x + 20, state.blacksmith.y + 10);
+            ctx.fillStyle = '#00ffff';
+            ctx.font = 'bold 14px "Segoe UI", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(state.npc.name, state.npc.x, state.npc.y - 30);
+            if (!state.selectedClass) {
+                ctx.fillStyle = '#ffaa00';
+                ctx.font = '20px sans-serif';
+                ctx.fillText('❓', state.npc.x, state.npc.y - 50 + Math.sin(performance.now() * 0.005) * 5);
+            } else {
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '16px sans-serif';
+                ctx.fillText('💬', state.npc.x, state.npc.y - 50 + Math.sin(performance.now() * 0.005) * 3);
+            }
+            const port = state.portal;
+            const time = performance.now() * 0.002;
+            ctx.save();
+            ctx.translate(port.x, port.y);
+            ctx.rotate(time);
+            ctx.strokeStyle = '#00ffff';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([20, 10]);
+            ctx.beginPath();
+            ctx.arc(0, 0, port.size / 2, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+            ctx.beginPath();
+            ctx.arc(port.x, port.y, port.size / 3, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0, 255, 255, 0.2)';
+            ctx.fill();
+            ctx.fillStyle = '#00ffff';
+            ctx.font = 'bold 14px sans-serif';
+            ctx.fillText("CỔNG DỊCH CHUYỂN", port.x, port.y - 60);
+        }
+
+        if (state.currentMap === 'forest') {
+            // 1. Phủ Background Xanh lá đậm nguyên màn hình
+            ctx.fillStyle = '#052a0c';
+            ctx.fillRect(state.camX, state.camY, this.canvas.width, this.canvas.height);
+
+            // --- MỚI: VẼ CHI TIẾT NỀN (Decorations) ---
+            if (state.forestEnv.decorations) {
+                state.forestEnv.decorations.forEach(d => {
+                    if (d.type === 0) { // Bụi cỏ rêu
+                        ctx.strokeStyle = '#0a2e13';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(d.x, d.y); ctx.lineTo(d.x - 4, d.y - 6);
+                        ctx.moveTo(d.x, d.y); ctx.lineTo(d.x + 2, d.y - 8);
+                        ctx.moveTo(d.x, d.y); ctx.lineTo(d.x + 5, d.y - 5);
+                        ctx.stroke();
+                    } else if (d.type === 1) { // Đá sỏi nhỏ đen
+                        ctx.fillStyle = '#0a120c';
+                        ctx.beginPath(); ctx.arc(d.x, d.y, 3, 0, Math.PI * 2); ctx.fill();
+                        ctx.beginPath(); ctx.arc(d.x + 4, d.y - 2, 2, 0, Math.PI * 2); ctx.fill();
+                    } else if (d.type === 2) { // Đom đóm mờ ảo
+                        ctx.fillStyle = 'rgba(0, 255, 150, 0.15)'; 
+                        ctx.beginPath(); ctx.arc(d.x, d.y, 2, 0, Math.PI * 2); ctx.fill();
+                        ctx.shadowBlur = 5; ctx.shadowColor = '#00ff96';
+                        ctx.fill(); ctx.shadowBlur = 0;
+                    }
+                });
+            }
+
+            // 2. Vẽ Hàng Rào Cây (Obstacles)
+            ctx.font = '40px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            state.forestEnv.trees.forEach(t => {
+                ctx.fillText('🌲', t.x, t.y);
+            });
+
+            ctx.fillStyle = 'rgba(0, 255, 255, 0.1)';
+            ctx.beginPath(); 
+            ctx.arc(state.forestEnv.portal.x, state.forestEnv.portal.y, 45, 0, Math.PI * 2); 
+            ctx.fill();
+            ctx.strokeStyle = '#00ffff'; 
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.font = '30px Arial'; 
+            ctx.fillText('🌀', state.forestEnv.portal.x, state.forestEnv.portal.y);
+            ctx.fillStyle = '#00ffff'; 
+            ctx.font = 'bold 12px Arial';
+            ctx.fillText('Trận Pháp Về Làng', state.forestEnv.portal.x, state.forestEnv.portal.y - 45);
+
+            state.forestEnv.herbs.forEach(h => {
+                ctx.font = '24px Arial';
+                ctx.fillText('🌿', h.x, h.y);
+                ctx.fillStyle = '#55ff55';
+                ctx.font = 'bold 11px Arial';
+                ctx.fillText('Linh Thảo', h.x, h.y - 20);
+            });
+
+            state.forestEnv.ores.forEach(o => {
+                ctx.font = '28px Arial';
+                ctx.fillText('🧱', o.x, o.y);
+                ctx.fillStyle = '#ffaa00';
+                ctx.font = 'bold 11px Arial';
+                ctx.fillText('Đồng Khoáng', o.x, o.y - 25);
+            });
+
+            if (state.isMining) {
+                const barW = 60, barH = 8;
+                const progress = (3.0 - state.miningTimer) / 3.0;
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillRect(state.player.x - barW/2, state.player.y - 60, barW, barH);
+                ctx.fillStyle = '#00ffff';
+                ctx.fillRect(state.player.x - barW/2, state.player.y - 60, barW * progress, barH);
+                ctx.fillStyle = '#fff';
+                ctx.font = '10px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText("ĐANG ĐÀO...", state.player.x, state.player.y - 65);
+            }
+        }
+
+        // ==========================================
+        // LAYER 3: THỰC THỂ (VFX, QUÁI, ĐẠN, PLAYER...)
+        // ==========================================
         state.vfxs.forEach(v => {
             ctx.save();
             if (v.type === 'slash') {
@@ -54,7 +213,6 @@ export class Renderer {
         state.tornados.forEach(t => { ctx.beginPath(); ctx.arc(t.x, t.y, t.radius, 0, Math.PI * 2); ctx.fillStyle = 'rgba(50, 255, 170, 0.4)'; ctx.fill(); ctx.strokeStyle = '#33ffaa'; ctx.lineWidth = 2; ctx.stroke(); });
         state.arrowRains.forEach(r => { ctx.beginPath(); ctx.arc(r.x, r.y, 150, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(50, 255, 80, 0.5)'; ctx.lineWidth = 2; ctx.stroke(); });
 
-        // Đá
         state.mountains.forEach(m => {
             ctx.save(); ctx.translate(m.x, m.y);
             const hpPct = m.hp / m.maxHp;
@@ -64,7 +222,6 @@ export class Renderer {
             ctx.restore();
         });
 
-        // Quái
         state.enemies.forEach(e => {
             ctx.save(); ctx.translate(e.x, e.y); if (e.isTossed > 0) { ctx.translate(0, -30); }
             ctx.rotate(Math.atan2(state.player.y - e.y, state.player.x - e.x));
@@ -73,22 +230,16 @@ export class Renderer {
             ctx.restore();
             ctx.fillStyle = '#220022'; ctx.fillRect(e.x - 20, e.y - 30, 40, 5); ctx.fillStyle = '#aa00ff'; ctx.fillRect(e.x - 20, e.y - 30, 40 * (e.hp / e.maxHp), 5);
 
-            // --- BỔ SUNG ĐOẠN VẼ TÊN ---
-            ctx.fillStyle = '#ffaa00'; // Màu vàng cam tiên hiệp
+            ctx.fillStyle = '#ffaa00';
             ctx.font = 'bold 12px "Segoe UI", sans-serif';
             ctx.textAlign = 'center';
-
-            // Vẽ chữ lùi lên trên (trừ đi nửa chiều cao của quái và thêm 15px để không bị đè vào thanh máu)
             const nameY = e.y - (e.size || 30) / 2 - 20;
-
-            // Thêm viền đen (Stroke) mỏng cho chữ dễ đọc trên nền tối
             ctx.lineWidth = 2;
             ctx.strokeStyle = '#000000';
             ctx.strokeText(e.name, e.x, nameY);
             ctx.fillText(e.name, e.x, nameY);
         });
 
-        // Boss
         if (state.boss) {
             const b = state.boss;
             ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(performance.now() * 0.001); ctx.beginPath(); ctx.arc(0, 0, 70, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(255, 0, 85, 0.8)'; ctx.lineWidth = 5; ctx.setLineDash([20, 10]); ctx.stroke(); ctx.setLineDash([]); ctx.restore();
@@ -98,7 +249,6 @@ export class Renderer {
             ctx.restore();
         }
 
-        // Đạn
         state.projectiles.forEach(p => {
             ctx.save(); ctx.translate(p.x, p.y);
             if (p.type === 'arrow' || p.type === 'bigarrow') {
@@ -113,7 +263,6 @@ export class Renderer {
             ctx.restore();
         });
 
-        // Vẽ XP Orbs (Vẽ trước Player để nằm dưới chân)
         state.xpOrbs.forEach(orb => {
             ctx.beginPath();
             ctx.arc(orb.x, orb.y, XP_ORB_CONFIG.size, 0, Math.PI * 2);
@@ -121,145 +270,11 @@ export class Renderer {
             ctx.shadowBlur = 10;
             ctx.shadowColor = XP_ORB_CONFIG.color;
             ctx.fill();
-            ctx.shadowBlur = 0; // Reset shadow để không lag
+            ctx.shadowBlur = 0; 
         });
 
         state.flyingSwords.forEach(s => { ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.angle); ctx.fillStyle = '#ccffff'; ctx.shadowBlur = 15; ctx.shadowColor = '#00aaff'; ctx.fillRect(-15, -4, 30, 8); ctx.restore(); });
 
-        // --- VẼ LÀNG TÂN THỦ ---
-        if (state.currentMap === 'village') {
-
-            const env = state.villageEnv;
-
-            // Vẽ Cỏ (Mấy nét gạch nhỏ)
-            ctx.strokeStyle = '#1a3300';
-            ctx.lineWidth = 2;
-            env.grass.forEach(g => {
-                ctx.beginPath();
-                ctx.moveTo(g.x, g.y); ctx.lineTo(g.x - 5, g.y - 10);
-                ctx.moveTo(g.x, g.y); ctx.lineTo(g.x + 5, g.y - 10);
-                ctx.stroke();
-            });
-
-            // Vẽ Cây
-            env.trees.forEach(t => {
-                ctx.fillStyle = '#4d2600'; // Thân cây
-                ctx.fillRect(t.x - 10, t.y, 20, 40);
-                ctx.beginPath(); // Tán lá
-                ctx.arc(t.x, t.y - 20, 40, 0, Math.PI * 2);
-                ctx.fillStyle = '#004d00';
-                ctx.fill();
-            });
-
-            // Vẽ Nhà (Hình vuông + Mái tam giác)
-            env.houses.forEach(h => {
-                ctx.fillStyle = '#804000'; // Thân nhà
-                ctx.fillRect(h.x - 60, h.y, 120, 80);
-                ctx.beginPath(); // Mái nhà
-                ctx.moveTo(h.x - 80, h.y);
-                ctx.lineTo(h.x, h.y - 60);
-                ctx.lineTo(h.x + 80, h.y);
-                ctx.fillStyle = '#4d0000';
-                ctx.fill();
-                ctx.fillStyle = '#000'; // Cửa sổ
-                ctx.fillRect(h.x - 10, h.y + 40, 20, 30);
-            });
-
-            // Vẽ ông lão
-            ctx.beginPath();
-            ctx.arc(state.npc.x, state.npc.y, state.npc.size / 2, 0, Math.PI * 2);
-            ctx.fillStyle = '#cccccc'; // Màu áo xám tro
-            ctx.fill();
-
-            // Vẽ Thiết Trùy Đại Sư (Thợ Rèn)
-            ctx.font = `${state.blacksmith.size}px Arial`;
-            ctx.fillText('🧔', state.blacksmith.x, state.blacksmith.y); // Icon ông chú râu quai nón
-            ctx.fillStyle = '#ff4444'; // Tên màu đỏ cam cho ngầu
-            ctx.font = '14px Arial';
-            ctx.fillText(state.blacksmith.name, state.blacksmith.x, state.blacksmith.y - 35);
-            ctx.font = '20px Arial';
-            ctx.fillText('🔨', state.blacksmith.x + 20, state.blacksmith.y + 10); // Vẽ thêm cái búa kế bên
-
-            // Vẽ tên Lão Nhân
-            ctx.fillStyle = '#00ffff';
-            ctx.font = 'bold 14px "Segoe UI", sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(state.npc.name, state.npc.x, state.npc.y - 30);
-
-            // CẬP NHẬT HIỆU ỨNG TRÊN ĐẦU
-            if (!state.selectedClass) {
-                // Chưa chọn class: Hiện dấu hỏi chấm vàng
-                ctx.fillStyle = '#ffaa00';
-                ctx.font = '20px sans-serif';
-                ctx.fillText('❓', state.npc.x, state.npc.y - 50 + Math.sin(performance.now() * 0.005) * 5);
-            } else {
-                // Đã chọn class: Hiện bong bóng chat trắng
-                ctx.fillStyle = '#ffffff';
-                ctx.font = '16px sans-serif';
-                ctx.fillText('💬', state.npc.x, state.npc.y - 50 + Math.sin(performance.now() * 0.005) * 3);
-            }
-
-            const port = state.portal;
-            const time = performance.now() * 0.002;
-
-            // Vẽ vòng tròn phát sáng xoay tròn
-            ctx.save();
-            ctx.translate(port.x, port.y);
-            ctx.rotate(time);
-
-            ctx.strokeStyle = '#00ffff';
-            ctx.lineWidth = 3;
-            ctx.setLineDash([20, 10]); // Nét đứt tạo hiệu ứng vòng quay
-            ctx.beginPath();
-            ctx.arc(0, 0, port.size / 2, 0, Math.PI * 2);
-            ctx.stroke();
-
-            // Lớp hào quang ở giữa
-            ctx.restore();
-            ctx.beginPath();
-            ctx.arc(port.x, port.y, port.size / 3, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(0, 255, 255, 0.2)';
-            ctx.fill();
-
-            // Chữ bên trên cổng
-            ctx.fillStyle = '#00ffff';
-            ctx.font = 'bold 14px sans-serif';
-            ctx.fillText("CỔNG DỊCH CHUYỂN", port.x, port.y - 60);
-        }
-
-        if (state.currentMap === 'forest') {
-            // Vẽ Thảo Dược
-            state.forestEnv.herbs.forEach(h => {
-                ctx.font = '20px Arial';
-                ctx.fillText('🌿', h.x, h.y);
-            });
-
-            // Vẽ Khoáng Sản
-            state.forestEnv.ores.forEach(o => {
-                ctx.font = '24px Arial';
-                ctx.fillText('🧱', o.x, o.y);
-            });
-
-            // VẼ THANH TIẾN TRÌNH ĐÀO KHOÁNG
-            if (state.isMining) {
-                const barW = 60, barH = 8;
-                const progress = (3.0 - state.miningTimer) / 3.0;
-
-                ctx.fillStyle = 'rgba(0,0,0,0.5)';
-                // Đã đổi p.x thành state.player.x
-                ctx.fillRect(state.player.x - barW / 2, state.player.y - 60, barW, barH);
-
-                ctx.fillStyle = '#00ffff';
-                ctx.fillRect(state.player.x - barW / 2, state.player.y - 60, barW * progress, barH);
-
-                ctx.fillStyle = '#fff';
-                ctx.font = '10px Arial';
-                ctx.textAlign = 'center'; // Thêm dòng này để chữ canh giữa cho đẹp
-                ctx.fillText("ĐANG ĐÀO...", state.player.x, state.player.y - 65);
-            }
-        }
-
-        // Player
         ctx.save(); ctx.translate(state.player.x, state.player.y);
         ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0, 255, 255, 0.1)'; ctx.fill(); ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)'; ctx.lineWidth = 2; ctx.stroke();
         ctx.rotate(state.player.angle);
@@ -279,7 +294,6 @@ export class Renderer {
         }
         ctx.restore();
 
-        // Particles
         state.vfxs.forEach(v => {
             if (v.type === 'particle') { ctx.fillStyle = v.color; ctx.globalAlpha = v.life * 2; ctx.beginPath(); ctx.arc(v.x, v.y, 4, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; }
             else if (v.type === 'fallingArrow') { ctx.fillStyle = '#33ff55'; ctx.globalAlpha = v.life * 3; ctx.fillRect(v.x, v.y, 2, 20); ctx.globalAlpha = 1; }
@@ -287,7 +301,6 @@ export class Renderer {
 
         ctx.restore();
 
-        // Crosshair
         if (state.gameRunning && !state.isDead && !state.isVictory) {
             ctx.strokeStyle = 'rgba(0, 255, 255, 0.8)'; ctx.lineWidth = 2;
             ctx.beginPath(); ctx.moveTo(input.mouseX - 10, input.mouseY); ctx.lineTo(input.mouseX + 10, input.mouseY); ctx.stroke();

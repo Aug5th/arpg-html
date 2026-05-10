@@ -310,9 +310,23 @@
                             <div class="eq-slot" data-name="Giày" id="eq-boots"></div>
                         </div>
                     </div>
+
                     <p style="text-align: center; color: #666; font-size: 11px; margin-top: auto; margin-bottom: 0;">
                         Phím [C]
                     </p>
+                </div>
+
+                <div
+                    style="margin-top: 20px; padding: 15px; background: rgba(0,255,255,0.05); border: 1px solid #004444; border-radius: 5px;">
+                    <h4
+                        style="margin: 0 0 10px 0; color: #00ffff; font-size: 14px; border-bottom: 1px solid #004444; padding-bottom: 5px;">
+                        THUỘC TÍNH NHÂN VẬT</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px;">
+                        <div style="color: #ff5555;">❤️ Máu tối đa: <b id="eq-stat-hp">0</b></div>
+                        <div style="color: #ffff55;">⚔️ Công kích: <b id="eq-stat-atk">0</b></div>
+                        <div style="color: #55ff55;">💨 Tốc độ chạy: <b id="eq-stat-spd">0</b></div>
+                        <div style="color: #55ffff;">⚡ Tốc đánh: <b id="eq-stat-aspd">0</b></div>
+                    </div>
                 </div>
 
                 <div id="inventory-panel" class="inv-panel" style="display: none;">
@@ -345,22 +359,32 @@
     <div id="blocker" class="screen-overlay" style="display: none; z-index: 50;">
         <h1 style="margin:0; font-size: 60px;">TẠM DỪNG</h1>
         <button class="btn" onclick="window.resumeGame()">TIẾP TỤC</button>
-        <button id="btn-exit-village" class="btn" style="background: #aa4400; border-color: #ffaa00; display: none;"
-            onclick="window.exitToVillage()">VỀ LÀNG</button>
+        <!-- <button id="btn-exit-village" class="btn" style="background: #aa4400; border-color: #ffaa00; display: none;"
+            onclick="window.exitToVillage()">VỀ LÀNG</button> -->
     </div>
     <div id="game-over-screen" class="screen-overlay">
-        <h1 style="margin:0; font-size: 60px;">ĐẠO TIÊU MA TRƯỞNG</h1>
-        <p style="font-size: 22px; color: #ccc;">Số yêu thú đã chém: <span id="final-score"
-                style="color:white; font-weight:bold;">0</span></p>
-        <button class="btn" onclick="window.showClassSelection()">ĐỔI PHÁP KHÍ / CHƠI LẠI</button>
+        <h1 style="margin:0; font-size: 60px;">THÔI RỒI LƯỢM ƠI</h1>
+        <button class="btn" onclick="window.exitToVillage()">VỀ LÀNG</button>
     </div>
     <div id="victory-screen" class="screen-overlay">
-        <h1 style="margin:0; font-size: 60px;">ĐẮC ĐẠO PHI THĂNG</h1>
+        <h1 style="margin:0; font-size: 60px;">MAY THẾ</h1>
         <p>Bạn đã tiêu diệt Ma Tôn Hắc Ám!</p>
-        <button class="btn" onclick="window.showClassSelection()">TIẾP TỤC TU LUYỆN</button>
+        <button class="btn" onclick="window.exitToVillage()">VỀ LÀNG</button>
+    </div>
+
+    <div id="item-tooltip"
+        style="display: none; position: absolute; background: rgba(0,20,40,0.95); border: 1px solid #ffaa00; border-radius: 5px; padding: 10px; color: white; pointer-events: none; z-index: 9999; min-width: 160px; box-shadow: 0 0 15px rgba(0,0,0,0.8);">
+        <div id="tt-name" style="font-weight: bold; color: #ffaa00; margin-bottom: 5px; font-size: 15px;">Tên vật phẩm
+        </div>
+        <div id="tt-type" style="font-size: 11px; color: #aaa; margin-bottom: 8px;">Loại</div>
+        <div id="tt-desc" style="font-size: 12px; color: #00ff00; line-height: 1.4;">Chỉ số</div>
+        <div id="tt-action"
+            style="font-size: 11px; color: #00ffff; margin-top: 8px; border-top: 1px dashed #555; padding-top: 5px; font-weight: bold;">
+            Hành động</div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
+
 
     <script type="module" src="src/main.js"></script>
 </body>

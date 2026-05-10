@@ -43,16 +43,16 @@ const state = {
     xpOrbs: [], cd: { lmb: 0, rmb: 0, s1: 0, s2: 0, s3: 0, dash: 0 },
     enemies: [], projectiles: [], vfxs: [], tornados: [], arrowRains: [], flyingSwords: [], mountains: [], boss: null,
     inventory: [], isMining: false, miningTimer: 0, miningTarget: null,
-    forestEnv: { enemies: [], herbs: [], ores: [] },
+    forestEnv: { enemies: [], herbs: [], ores: [], trees: [], portal: { x: 0, y: 0 } },
 };
 
 const CRAFT_RECIPES = {
-    'helm_1': { id: 'helm_1', name: 'Nón Tu Sĩ', icon: '🪖', type: 'helmet', stats: { maxHp: 50 }, req: [{id: 'herb', name: 'Linh Thảo', icon:'🌿', count: 5}, {id: 'copper', name: 'Đồng Khoáng', icon:'🧱', count: 2}] },
-    'armor_1': { id: 'armor_1', name: 'Thanh Y', icon: '🦺', type: 'armor', stats: { maxHp: 100, speed: 5 }, req: [{id: 'herb', name: 'Linh Thảo', icon:'🌿', count: 8}, {id: 'copper', name: 'Đồng Khoáng', icon:'🧱', count: 5}] },
-    'gloves_1': { id: 'gloves_1', name: 'Hộ Thể Quyền', icon: '🧤', type: 'gloves', stats: { attack: 2 }, req: [{id: 'herb', name: 'Linh Thảo', icon:'🌿', count: 3}, {id: 'copper', name: 'Đồng Khoáng', icon:'🧱', count: 4}] },
-    'boots_1': { id: 'boots_1', name: 'Tật Phong Hài', icon: '👢', type: 'boots', stats: { speed: 15 }, req: [{id: 'herb', name: 'Linh Thảo', icon:'🌿', count: 5}, {id: 'copper', name: 'Đồng Khoáng', icon:'🧱', count: 3}] },
-    'ring_1': { id: 'ring_1', name: 'Huyết Ngọc Giới', icon: '💍', type: 'ring', stats: { attack: 5 }, req: [{id: 'copper', name: 'Đồng Khoáng', icon:'🧱', count: 10}] },
-    'neck_1': { id: 'neck_1', name: 'Tụ Linh Xuyến', icon: '📿', type: 'necklace', stats: { maxHp: 50, attack: 3 }, req: [{id: 'herb', name: 'Linh Thảo', icon:'🌿', count: 10}, {id: 'copper', name: 'Đồng Khoáng', icon:'🧱', count: 8}] }
+    'helm_1': { id: 'helm_1', name: 'Nón Tu Sĩ', icon: '🪖', type: 'helmet', stats: { maxHp: 50 }, req: [{ id: 'herb', name: 'Linh Thảo', icon: '🌿', count: 5 }, { id: 'copper', name: 'Đồng Khoáng', icon: '🧱', count: 2 }] },
+    'armor_1': { id: 'armor_1', name: 'Thanh Y', icon: '🦺', type: 'armor', stats: { maxHp: 100, speed: 5 }, req: [{ id: 'herb', name: 'Linh Thảo', icon: '🌿', count: 8 }, { id: 'copper', name: 'Đồng Khoáng', icon: '🧱', count: 5 }] },
+    'gloves_1': { id: 'gloves_1', name: 'Hộ Thể Quyền', icon: '🧤', type: 'gloves', stats: { attack: 2 }, req: [{ id: 'herb', name: 'Linh Thảo', icon: '🌿', count: 3 }, { id: 'copper', name: 'Đồng Khoáng', icon: '🧱', count: 4 }] },
+    'boots_1': { id: 'boots_1', name: 'Tật Phong Hài', icon: '👢', type: 'boots', stats: { speed: 15 }, req: [{ id: 'herb', name: 'Linh Thảo', icon: '🌿', count: 5 }, { id: 'copper', name: 'Đồng Khoáng', icon: '🧱', count: 3 }] },
+    'ring_1': { id: 'ring_1', name: 'Huyết Ngọc Giới', icon: '💍', type: 'ring', stats: { attack: 5 }, req: [{ id: 'copper', name: 'Đồng Khoáng', icon: '🧱', count: 10 }] },
+    'neck_1': { id: 'neck_1', name: 'Tụ Linh Xuyến', icon: '📿', type: 'necklace', stats: { maxHp: 50, attack: 3 }, req: [{ id: 'herb', name: 'Linh Thảo', icon: '🌿', count: 10 }, { id: 'copper', name: 'Đồng Khoáng', icon: '🧱', count: 8 }] }
 };
 
 for (let i = 0; i < 30; i++) {
@@ -74,12 +74,12 @@ input.onEscape = () => {
     state.isPaused = !state.isPaused;
     ui.toggleScreen('blocker', state.isPaused);
 
-    // KIỂM TRA HIỆN NÚT VỀ LÀNG
-    const exitBtn = document.getElementById('btn-exit-village');
-    if (exitBtn) {
-        // Chỉ hiện nút nếu không ở Village
-        exitBtn.style.display = (state.currentMap !== 'village') ? 'block' : 'none';
-    }
+    // // KIỂM TRA HIỆN NÚT VỀ LÀNG
+    // const exitBtn = document.getElementById('btn-exit-village');
+    // if (exitBtn) {
+    //     // Chỉ hiện nút nếu không ở Village
+    //     exitBtn.style.display = (state.currentMap !== 'village') ? 'block' : 'none';
+    // }
 
     if (!state.isPaused) {
         state.lastTime = performance.now();
@@ -127,6 +127,11 @@ input.onKeyDownAction = (k) => {
             if (ore) {
                 state.isMining = true; state.miningTimer = 3.0; state.miningTarget = ore; return;
             }
+            const distPortal = Math.hypot(state.player.x - state.forestEnv.portal.x, state.player.y - state.forestEnv.portal.y);
+            if (distPortal < 80) {
+                window.exitToVillage();
+                return;
+            }
         }
     }
 
@@ -142,7 +147,7 @@ input.onKeyDownAction = (k) => {
     if (k === 'b') {
         if (!state.gameRunning || state.isDead || state.isVictory) return;
         state.isInventoryOpen = !state.isInventoryOpen;
-        if (state.isInventoryOpen) updateInventoryUI();
+        if (state.isInventoryOpen) window.updateInventoryUI();
         updateMenuVisibility(); return;
     }
 
@@ -191,6 +196,7 @@ function updateMenuVisibility() {
     ui.setElementDisplay('equipment-panel', state.isEquipmentOpen ? 'flex' : 'none');
     ui.setElementDisplay('inventory-panel', state.isInventoryOpen ? 'flex' : 'none');
     ui.setElementDisplay('blacksmith-panel', state.isBlacksmithOpen ? 'flex' : 'none');
+    window.updateEquipmentUI();
     if (!anyMenuOpen) { state.lastTime = performance.now(); requestAnimationFrame(gameLoop); }
 }
 
@@ -257,7 +263,10 @@ function takePlayerDamage(amount) {
     state.player.hp = Math.max(0, state.player.hp - amount); state.player.iFrames = 0.5; ui.updateHp(state.player.hp, state.player.maxHp);
     const dmgEl = ui.createDmgText(amount, '#ff0000', document.getElementById('damage-container'));
     state.vfxs.push({ type: 'text', el: dmgEl, x: state.player.x + (Math.random() - 0.5) * 40, y: state.player.y, vy: -50, life: 1.0 });
-    if (state.player.hp <= 0) { state.isDead = true; document.getElementById('final-score').innerText = state.kills; ui.toggleScreen('game-over-screen', true); }
+    if (state.player.hp <= 0) { 
+        state.isDead = true; 
+        ui.toggleScreen('game-over-screen', true); 
+    }
 }
 
 function spawnDungeonEnemy() {
@@ -286,18 +295,27 @@ function addItemToInventory(item) {
     if (!item) return;
     const existing = state.inventory.find(i => i.id === item.id);
     if (existing) existing.count++; else state.inventory.push({ ...item, count: 1 });
-    updateInventoryUI();
+    window.updateInventoryUI();
 }
 
-function updateInventoryUI() {
+window.updateInventoryUI = () => {
     const grid = document.getElementById('inventory-grid');
     if (!grid) return;
     grid.innerHTML = '';
-    // Vẽ cứng 16 ô túi đồ
+
+    // Vẽ 16 ô túi đồ
     for (let i = 0; i < 16; i++) {
         const item = state.inventory[i];
         if (item) {
-            grid.innerHTML += `<div class="inv-slot"><div class="item-icon">${item.icon}</div><div class="item-count">${item.count}</div></div>`;
+            grid.innerHTML += `
+                <div class="inv-slot" style="cursor: ${item.isEquipment ? 'pointer' : 'default'};"
+                     onmouseenter="window.showItemTooltip(event, ${i})"
+                     onmouseleave="window.hideItemTooltip()"
+                     onmousemove="window.moveItemTooltip(event)"
+                     onclick="window.useItem(${i})">
+                    <div class="item-icon">${item.icon}</div>
+                    <div class="item-count">${item.count > 1 ? item.count : ''}</div>
+                </div>`;
         } else {
             grid.innerHTML += `<div class="inv-slot" style="background: rgba(0,0,0,0.3); border: 1px dashed #444;"></div>`;
         }
@@ -305,12 +323,50 @@ function updateInventoryUI() {
 }
 
 function initForestMap() {
-    state.enemies = []; state.projectiles = []; state.xpOrbs = []; state.forestEnv.herbs = []; state.forestEnv.ores = [];
-    for (let i = 0; i < 5; i++) state.forestEnv.herbs.push({ x: (Math.random() - 0.5) * 1500, y: (Math.random() - 0.5) * 1500 });
-    for (let i = 0; i < 3; i++) state.forestEnv.ores.push({ x: (Math.random() - 0.5) * 1200, y: (Math.random() - 0.5) * 1200 });
+    state.enemies = []; state.projectiles = []; state.xpOrbs = [];
+    state.forestEnv.herbs = []; state.forestEnv.ores = []; state.forestEnv.trees = []; state.forestEnv.decorations = [];
+
+    // 1. Dựng hàng rào cây cối (Giới hạn Map: 3200px)
+    const mapLimit = 3200;
+    for (let i = -mapLimit; i <= mapLimit; i += 60) {
+        state.forestEnv.trees.push({ x: i, y: -mapLimit }); // Viền trên
+        state.forestEnv.trees.push({ x: i, y: mapLimit });  // Viền dưới
+        state.forestEnv.trees.push({ x: -mapLimit, y: i }); // Viền trái
+        state.forestEnv.trees.push({ x: mapLimit, y: i });  // Viền phải
+    }
+
+    for (let i = 0; i < 400; i++) {
+        let rx = (Math.random() - 0.5) * 6100;
+        let ry = (Math.random() - 0.5) * 6100;
+        // Có 3 loại: 0 (Cỏ rêu), 1 (Đá sỏi), 2 (Đom đóm mờ)
+        let type = Math.floor(Math.random() * 3);
+        state.forestEnv.decorations.push({ x: rx, y: ry, type: type });
+    }
+
+    // 2. Sinh 16 Thảo dược rải rác (Bán kính từ -3000 đến 3000)
+    while (state.forestEnv.herbs.length < 16) {
+        let rx = (Math.random() - 0.5) * 6000; 
+        let ry = (Math.random() - 0.5) * 6000;
+        if (Math.hypot(rx, ry) > 250) state.forestEnv.herbs.push({ x: rx, y: ry });
+    }
+
+    // 3. Sinh 10 Mỏ khoáng rải rác
+    while (state.forestEnv.ores.length < 10) {
+        let rx = (Math.random() - 0.5) * 6000;
+        let ry = (Math.random() - 0.5) * 6000;
+        if (Math.hypot(rx, ry) > 300) state.forestEnv.ores.push({ x: rx, y: ry });
+    }
 }
 
 window.clearMapState = () => {
+
+    state.vfxs.forEach(v => {
+        if (v.el) v.el.remove();
+    });
+
+    const dmgContainer = document.getElementById('damage-container');
+    if (dmgContainer) dmgContainer.innerHTML = '';
+
     // 1. Dọn sạch thực thể
     state.enemies = [];
     state.projectiles = [];
@@ -358,7 +414,7 @@ function update(dt) {
     // ----- LOGIC MAP LÀNG -----
     if (state.currentMap === 'village') {
         const LIMIT = 1000; p.x = Math.max(-LIMIT, Math.min(LIMIT, p.x)); p.y = Math.max(-LIMIT, Math.min(LIMIT, p.y));
-        const distNPC = Math.hypot(p.x - state.npc.x, p.y - state.npc.y); 
+        const distNPC = Math.hypot(p.x - state.npc.x, p.y - state.npc.y);
         const distPortal = Math.hypot(p.x - state.portal.x, p.y - state.portal.y);
         const distSmith = Math.hypot(p.x - state.blacksmith.x, p.y - state.blacksmith.y);
         const currentlyInRange = (distNPC < 120 || distPortal < 120 || distSmith < 120);
@@ -367,11 +423,11 @@ function update(dt) {
             if (!state.isPromptInRange && !state.isDialogueOpen) {
                 state.isPromptInRange = true; state.promptTimer = 3.0;
                 const promptEl = document.getElementById('interaction-prompt');
-                
+
                 if (distNPC < 120) promptEl.innerText = state.selectedClass ? "BẤM [E] ĐỂ TRÒ CHUYỆN" : "BẤM [E] ĐỂ NHẬN KỲ DUYÊN";
                 else if (distPortal < 120) promptEl.innerText = "BẤM [E] ĐỂ DỊCH CHUYỂN";
                 else if (distSmith < 120) promptEl.innerText = "BẤM [E] ĐỂ RÈN TRANG BỊ";
-                
+
                 promptEl.style.display = 'block';
             }
         } else {
@@ -383,9 +439,16 @@ function update(dt) {
 
     // ----- LOGIC MAP THANH DIỆP LÂM -----
     if (state.currentMap === 'forest') {
+        // THÊM: Chặn Player không cho vượt qua hàng rào cây
+        const LIMIT = 3160; 
+        p.x = Math.max(-LIMIT, Math.min(LIMIT, p.x)); 
+        p.y = Math.max(-LIMIT, Math.min(LIMIT, p.y));
+        
         const promptEl = document.getElementById('interaction-prompt');
         let canInteract = false;
 
+        const distPortal = Math.hypot(p.x - state.forestEnv.portal.x, p.y - state.forestEnv.portal.y);
+        
         if (state.isMining) {
             promptEl.innerText = "BẤM [E] ĐỂ HỦY ĐÀO"; canInteract = true;
             state.miningTimer -= dt;
@@ -394,7 +457,12 @@ function update(dt) {
                 state.forestEnv.ores = state.forestEnv.ores.filter(o => o !== state.miningTarget);
                 state.isMining = false;
             }
-        } else {
+        } 
+        // THÊM: Hiện chữ Bấm E khi đứng gần Portal
+        else if (distPortal < 80) {
+            promptEl.innerText = "BẤM [E] ĐỂ VỀ LÀNG"; canInteract = true;
+        } 
+        else {
             const closeHerb = state.forestEnv.herbs.find(h => Math.hypot(p.x - h.x, p.y - h.y) < 60);
             const closeOre = state.forestEnv.ores.find(o => Math.hypot(p.x - o.x, p.y - o.y) < 60);
             if (closeHerb) { promptEl.innerText = "BẤM [E] ĐỂ HÁI LINH THẢO"; canInteract = true; }
@@ -536,7 +604,7 @@ window.changeScene = function (sceneId) {
 
 window.startVillage = (isLoad = false) => {
     state.currentMap = 'village';
-    changeScene('scene-village');
+    window.changeScene('scene-village');
 
     if (!isLoad) {
         state.selectedClass = null;
@@ -578,7 +646,9 @@ window.startVillage = (isLoad = false) => {
 
 window.showClassSelection = () => {
     state.gameRunning = false; state.isPaused = false; ui.toggleScreen('blocker', false);
-    document.getElementById('interaction-prompt').style.display = 'none'; changeScene('scene-class-selection'); document.getElementById('global-player-hud').style.display = 'none';
+    document.getElementById('interaction-prompt').style.display = 'none';
+    window.changeScene('scene-class-selection');
+    document.getElementById('global-player-hud').style.display = 'none';
 };
 
 window.selectClass = (cls) => {
@@ -590,15 +660,23 @@ window.selectClass = (cls) => {
 };
 
 window.exitToVillage = () => {
-    // 1. Tắt trạng thái Pause
+    // 1. Reset các trạng thái kết thúc game (phòng trường hợp đang ở màn hình Chết/Thắng)
+    state.isDead = false;
+    state.isVictory = false;
+
+    // 2. Hồi đầy máu cho nhân vật
+    state.player.hp = state.player.maxHp;
+
+    // 3. Tắt trạng thái Pause và ẩn toàn bộ các màn hình overlay
     state.isPaused = false;
     ui.toggleScreen('blocker', false);
+    document.getElementById('game-over-screen').style.display = 'none';
+    document.getElementById('victory-screen').style.display = 'none';
 
-    // 2. Quay về làng (isLoad = true để giữ nguyên chỉ số hiện tại)
+    // 4. Quay về làng (isLoad = true để giữ nguyên level/exp/túi đồ)
     window.startVillage(true);
 
-    // 3. Thông báo lưu game
-    console.log("Đã bảo toàn tài nguyên và trở về làng.");
+    console.log("Đã phục hồi trạng thái và trở về làng.");
 };
 
 // ================= HỆ THỐNG LÒ RÈN =================
@@ -609,7 +687,7 @@ window.openBlacksmith = () => {
 
     const listEl = document.getElementById('craft-list');
     listEl.innerHTML = '';
-    
+
     // Vẽ danh sách item bên trái
     const typeVN = {
         'helmet': 'Nón',
@@ -648,7 +726,7 @@ window.closeBlacksmith = () => {
 window.selectCraftItem = (key) => {
     state.selectedCraftId = key;
     const item = CRAFT_RECIPES[key];
-    
+
     // Reset background của list
     document.querySelectorAll('.craft-item-row').forEach(el => {
         el.style.background = 'rgba(255,255,255,0.05)';
@@ -663,7 +741,7 @@ window.selectCraftItem = (key) => {
     // Hiển thị chi tiết
     document.getElementById('craft-icon').innerText = item.icon;
     document.getElementById('craft-name').innerText = item.name;
-    
+
     let statsStr = '';
     if (item.stats.maxHp) statsStr += `Máu tối đa: +${item.stats.maxHp} &nbsp;&nbsp;`;
     if (item.stats.attack) statsStr += `Sát thương: +${item.stats.attack} &nbsp;&nbsp;`;
@@ -702,7 +780,7 @@ window.selectCraftItem = (key) => {
 window.doCraft = () => {
     if (!state.selectedCraftId) return;
     const item = CRAFT_RECIPES[state.selectedCraftId];
-    
+
     // Kiểm tra lại lần cuối
     let canCraft = true;
     item.req.forEach(req => {
@@ -734,18 +812,171 @@ window.doCraft = () => {
         icon: item.icon,
         type: item.type,
         stats: item.stats,
-        count: 1, 
+        count: 1,
         isEquipment: true // Cờ đánh dấu đây là trang bị, không phải nguyên liệu
     });
 
     // 3. Render lại
-    updateInventoryUI();
+    window.updateInventoryUI();
     window.selectCraftItem(state.selectedCraftId); // Cập nhật lại số nguyên liệu hiện tại
-    
+
     // Hiệu ứng nhẹ
     const iconEl = document.getElementById('craft-icon');
     iconEl.style.transform = 'scale(1.5)';
     setTimeout(() => iconEl.style.transform = 'scale(1)', 200);
+};
+
+// ================= HỆ THỐNG TOOLTIP & TRANG BỊ =================
+
+window.showItemTooltip = (e, itemOrIndex, isEquipped = false) => {
+    // Nếu truyền vào index (số), lấy item từ inventory. Nếu truyền vào object, dùng luôn.
+    const item = (typeof itemOrIndex === 'number') ? state.inventory[itemOrIndex] : itemOrIndex;
+    if (!item) return;
+
+    const tt = document.getElementById('item-tooltip');
+    document.getElementById('tt-name').innerText = item.name;
+
+    const typeVN = { 'helmet': 'Nón', 'armor': 'Áo giáp', 'gloves': 'Bao tay', 'boots': 'Giày', 'ring': 'Nhẫn', 'necklace': 'Dây chuyền', 'ring1': 'Nhẫn', 'ring2': 'Nhẫn' };
+    document.getElementById('tt-type').innerText = 'Loại: ' + (typeVN[item.type] || item.type || 'Vật phẩm');
+
+    let desc = '';
+    if (item.stats) {
+        if (item.stats.maxHp) desc += `<span style="color: #ff5555;">Máu tối đa: +${item.stats.maxHp}</span><br>`;
+        if (item.stats.attack) desc += `<span style="color: #ffff55;">Sát thương: +${item.stats.attack}</span><br>`;
+        if (item.stats.speed) desc += `<span style="color: #55ff55;">Tốc độ: +${item.stats.speed}</span><br>`;
+    } else {
+        desc = '<span style="color: #ccc;">Nguyên liệu dùng để chế tạo.</span>';
+    }
+    document.getElementById('tt-desc').innerHTML = desc;
+
+    const actionEl = document.getElementById('tt-action');
+    if (item.isEquipment) {
+        actionEl.innerText = isEquipped ? '🖱️ Chuột trái để Tháo' : '🖱️ Chuột trái để Trang bị';
+        actionEl.style.display = 'block';
+    } else {
+        actionEl.style.display = 'none';
+    }
+
+    tt.style.display = 'block';
+    tt.style.left = (e.pageX + 15) + 'px';
+    tt.style.top = (e.pageY + 15) + 'px';
+};
+
+window.hideItemTooltip = () => { document.getElementById('item-tooltip').style.display = 'none'; };
+
+window.moveItemTooltip = (e) => {
+    const tt = document.getElementById('item-tooltip');
+    if (tt.style.display === 'block') { tt.style.left = (e.pageX + 15) + 'px'; tt.style.top = (e.pageY + 15) + 'px'; }
+};
+
+window.applyEquipmentStats = (item, isEquipping) => {
+    if (!item || !item.stats) return;
+    const sign = isEquipping ? 1 : -1;
+
+    if (item.stats.maxHp) {
+        state.player.maxHp += item.stats.maxHp * sign;
+        // Tránh tình trạng máu hiện tại cao hơn maxHp khi tháo đồ
+        if (!isEquipping && state.player.hp > state.player.maxHp) state.player.hp = state.player.maxHp;
+        // Bơm máu khi mặc đồ có maxHp
+        if (isEquipping) state.player.hp += item.stats.maxHp;
+    }
+    if (item.stats.attack) state.player.attack += item.stats.attack * sign;
+    if (item.stats.speed) state.player.speed += item.stats.speed * sign;
+};
+
+// Hàm MẶC trang bị
+window.useItem = (index) => {
+    const item = state.inventory[index];
+    if (!item || !item.isEquipment) return;
+
+    window.hideItemTooltip();
+
+    let slotType = item.type;
+    // Logic tự động xếp Nhẫn vào 2 ô
+    if (slotType === 'ring') {
+        if (!state.player.equipment.ring1) slotType = 'ring1';
+        else if (!state.player.equipment.ring2) slotType = 'ring2';
+        else slotType = 'ring1'; // Mặc định đè nhẫn 1 nếu cả 2 đầy
+    }
+
+    const oldItem = state.player.equipment[slotType];
+
+    // Đổi chỗ: Cất đồ cũ vào túi, mặc đồ mới lên người
+    if (oldItem) {
+        window.applyEquipmentStats(oldItem, false);
+        state.inventory[index] = oldItem;
+    } else {
+        state.inventory.splice(index, 1);
+    }
+
+    state.player.equipment[slotType] = item;
+    window.applyEquipmentStats(item, true);
+
+    // Cập nhật lại toàn bộ UI
+    window.updateInventoryUI();
+    window.updateEquipmentUI();
+    ui.updateHp(state.player.hp, state.player.maxHp);
+    ui.updateStats(state.player.attack, state.player.speed);
+};
+
+// Hàm THÁO trang bị
+window.unequipItem = (slotType) => {
+    const item = state.player.equipment[slotType];
+    if (!item) return;
+
+    if (state.inventory.length >= 16) {
+        alert("Túi đồ đã đầy, không thể tháo trang bị!");
+        return;
+    }
+
+    window.hideItemTooltip();
+    window.applyEquipmentStats(item, false); // Trừ chỉ số
+    state.inventory.push(item); // Vứt lại vào túi
+    state.player.equipment[slotType] = null; // Làm trống slot
+
+    window.updateInventoryUI();
+    window.updateEquipmentUI();
+    ui.updateHp(state.player.hp, state.player.maxHp);
+    ui.updateStats(state.player.attack, state.player.speed);
+};
+
+// Vẽ trang bị đang mặc lên Bảng Trang Bị (Phím C)
+window.updateEquipmentUI = () => {
+    const slots = ['helmet', 'armor', 'gloves', 'boots', 'necklace', 'ring1', 'ring2'];
+    slots.forEach(slot => {
+        const el = document.getElementById('eq-' + slot);
+        if (!el) return;
+
+        const item = state.player.equipment[slot];
+        if (item) {
+            el.innerHTML = `<div style="font-size:30px;">${item.icon}</div>`;
+            el.classList.remove('locked');
+            el.style.cursor = 'pointer';
+
+            // Gắn Tooltip cho đồ đang mặc
+            el.onmouseenter = (e) => window.showItemTooltip(e, item, true);
+            el.onmouseleave = () => window.hideItemTooltip();
+            el.onmousemove = (e) => window.moveItemTooltip(e);
+            el.onclick = () => window.unequipItem(slot);
+        } else {
+            el.innerHTML = '';
+            el.style.cursor = 'default';
+            el.onmouseenter = null;
+            el.onclick = null;
+        }
+    });
+
+    // CẬP NHẬT BẢNG STATS CHI TIẾT
+    const p = state.player;
+    const hpEl = document.getElementById('eq-stat-hp');
+    const atkEl = document.getElementById('eq-stat-atk');
+    const spdEl = document.getElementById('eq-stat-spd');
+    const aspdEl = document.getElementById('eq-stat-aspd');
+
+    if (hpEl) hpEl.innerText = p.maxHp;
+    if (atkEl) atkEl.innerText = p.attack.toFixed(1);
+    if (spdEl) spdEl.innerText = p.speed;
+    if (aspdEl) aspdEl.innerText = p.attackSpeed.toFixed(2) + "x";
 };
 
 window.teleportTo = (loc) => {
@@ -757,8 +988,14 @@ window.teleportTo = (loc) => {
         state.playTime = 0; state.enemies = []; state.boss = null; state.projectiles = []; state.vfxs = []; state.xpOrbs = [];
     } else if (loc === 'forest') {
         state.currentMap = 'forest'; window.changeScene('scene-forest');
-        document.getElementById('global-player-hud').style.display = 'block'; document.getElementById('skill-panel').style.display = 'flex'; document.getElementById('score-board').style.display = 'flex';
+        document.getElementById('global-player-hud').style.display = 'block';
+        document.getElementById('skill-panel').style.display = 'flex';
+        document.getElementById('score-board').style.display = 'flex';
         initForestMap();
+
+        // spawn in the portal
+        state.player.x = 0;
+        state.player.y = 80;
     }
     ui.updateHp(state.player.hp, state.player.maxHp); ui.updateLevel(state.player.level); ui.updateStats(state.player.attack, state.player.speed);
     ui.updateXp(state.player.exp, state.player.nextLevelExp);
@@ -785,7 +1022,8 @@ window.saveGame = () => {
             maxHp: state.player.maxHp,
             attack: state.player.attack,
             speed: state.player.speed,
-            attackSpeed: state.player.attackSpeed
+            attackSpeed: state.player.attackSpeed,
+            equipment: state.player.equipment
         },
         kills: state.kills,
         timestamp: new Date().toLocaleString('vi-VN')
@@ -805,9 +1043,9 @@ window.loadGame = (slotId) => {
     state.kills = data.kills;
     state.player = { ...state.player, ...data.player };
 
-    // THÊM 2 DÒNG NÀY ĐỂ TẢI TÚI ĐỒ
     state.inventory = data.inventory || [];
-    updateInventoryUI();
+    window.updateInventoryUI();
+    window.updateEquipmentUI();
 
     window.startVillage(true);
 };
@@ -833,10 +1071,10 @@ window.startNewGame = (slotId) => {
 
     // RESET TÚI ĐỒ KHI TẠO MỚI
     state.inventory = [];
-    updateInventoryUI();
+    window.updateInventoryUI();
 
     window.startVillage();
-    saveGame();
+    window.saveGame();
 };
 
-changeScene('scene-main-menu');
+window.changeScene('scene-main-menu');
