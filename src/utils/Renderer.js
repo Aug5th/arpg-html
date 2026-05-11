@@ -1,4 +1,4 @@
-import { VISUAL_CONFIG, XP_ORB_CONFIG } from '../data/GameData.js';
+import { VISUAL_CONFIG, XP_ORB_CONFIG, MAP_CONFIG } from '../data/GameData.js';
 
 export class Renderer {
     constructor(canvas) {
@@ -109,79 +109,50 @@ export class Renderer {
             ctx.fillText("CỔNG DỊCH CHUYỂN", port.x, port.y - 60);
         }
 
-        if (state.currentMap === 'forest') {
-            // 1. Phủ Background Xanh lá đậm nguyên màn hình
-            ctx.fillStyle = '#052a0c';
+        if (['forest', 'desert', 'ice', 'ocean', 'volcano'].includes(state.currentMap)) {
+            const mapConfig = MAP_CONFIG[state.currentMap];
+
+            // 1. Phủ Background đặc trưng của Map
+            ctx.fillStyle = mapConfig.bgColor;
             ctx.fillRect(state.camX, state.camY, this.canvas.width, this.canvas.height);
 
-            // --- MỚI: VẼ CHI TIẾT NỀN (Decorations) ---
-            if (state.forestEnv.decorations) {
-                state.forestEnv.decorations.forEach(d => {
-                    if (d.type === 0) { // Bụi cỏ rêu
-                        ctx.strokeStyle = '#0a2e13';
-                        ctx.lineWidth = 2;
-                        ctx.beginPath();
-                        ctx.moveTo(d.x, d.y); ctx.lineTo(d.x - 4, d.y - 6);
-                        ctx.moveTo(d.x, d.y); ctx.lineTo(d.x + 2, d.y - 8);
-                        ctx.moveTo(d.x, d.y); ctx.lineTo(d.x + 5, d.y - 5);
-                        ctx.stroke();
-                    } else if (d.type === 1) { // Đá sỏi nhỏ đen
-                        ctx.fillStyle = '#0a120c';
-                        ctx.beginPath(); ctx.arc(d.x, d.y, 3, 0, Math.PI * 2); ctx.fill();
-                        ctx.beginPath(); ctx.arc(d.x + 4, d.y - 2, 2, 0, Math.PI * 2); ctx.fill();
-                    } else if (d.type === 2) { // Đom đóm mờ ảo
-                        ctx.fillStyle = 'rgba(0, 255, 150, 0.15)'; 
-                        ctx.beginPath(); ctx.arc(d.x, d.y, 2, 0, Math.PI * 2); ctx.fill();
-                        ctx.shadowBlur = 5; ctx.shadowColor = '#00ff96';
-                        ctx.fill(); ctx.shadowBlur = 0;
-                    }
+            // 2. Vẽ Chi tiết nền (Decorations)
+            if (state.mapEnv.decorations) {
+                state.mapEnv.decorations.forEach(d => {
+                    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+                    ctx.beginPath(); ctx.arc(d.x, d.y, d.type === 2 ? 3 : 1, 0, Math.PI * 2); ctx.fill();
                 });
             }
 
-            // 2. Vẽ Hàng Rào Cây (Obstacles)
+            // 3. Vẽ Hàng rào chắn
             ctx.font = '40px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            state.forestEnv.trees.forEach(t => {
-                ctx.fillText('🌲', t.x, t.y);
-            });
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            state.mapEnv.trees.forEach(t => ctx.fillText(mapConfig.obstacle, t.x, t.y));
 
+            // 4. Vẽ Cổng Dịch Chuyển
             ctx.fillStyle = 'rgba(0, 255, 255, 0.1)';
-            ctx.beginPath(); 
-            ctx.arc(state.forestEnv.portal.x, state.forestEnv.portal.y, 45, 0, Math.PI * 2); 
-            ctx.fill();
-            ctx.strokeStyle = '#00ffff'; 
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            ctx.font = '30px Arial'; 
-            ctx.fillText('🌀', state.forestEnv.portal.x, state.forestEnv.portal.y);
-            ctx.fillStyle = '#00ffff'; 
-            ctx.font = 'bold 12px Arial';
-            ctx.fillText('Trận Pháp Về Làng', state.forestEnv.portal.x, state.forestEnv.portal.y - 45);
+            ctx.beginPath(); ctx.arc(state.mapEnv.portal.x, state.mapEnv.portal.y, 45, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.font = '30px Arial'; ctx.fillText('🌀', state.mapEnv.portal.x, state.mapEnv.portal.y);
 
-            state.forestEnv.herbs.forEach(h => {
-                ctx.font = '24px Arial';
-                ctx.fillText('🌿', h.x, h.y);
-                ctx.fillStyle = '#55ff55';
-                ctx.font = 'bold 11px Arial';
-                ctx.fillText('Linh Thảo', h.x, h.y - 20);
+            // 5. Vẽ Tài nguyên (Linh Thảo & Khoáng của map hiện tại)
+            state.mapEnv.herbs.forEach(h => {
+                ctx.font = '24px Arial'; ctx.fillText(mapConfig.herb.item.icon, h.x, h.y);
+                ctx.fillStyle = '#55ff55'; ctx.font = 'bold 11px Arial'; ctx.fillText(mapConfig.herb.item.name, h.x, h.y - 20);
             });
 
-            state.forestEnv.ores.forEach(o => {
-                ctx.font = '28px Arial';
-                ctx.fillText('🧱', o.x, o.y);
-                ctx.fillStyle = '#ffaa00';
-                ctx.font = 'bold 11px Arial';
-                ctx.fillText('Đồng Khoáng', o.x, o.y - 25);
+            state.mapEnv.ores.forEach(o => {
+                ctx.font = '28px Arial'; ctx.fillText(mapConfig.ore.item.icon, o.x, o.y);
+                ctx.fillStyle = '#ffaa00'; ctx.font = 'bold 11px Arial'; ctx.fillText(mapConfig.ore.item.name, o.x, o.y - 25);
             });
 
             if (state.isMining) {
                 const barW = 60, barH = 8;
                 const progress = (3.0 - state.miningTimer) / 3.0;
                 ctx.fillStyle = 'rgba(0,0,0,0.5)';
-                ctx.fillRect(state.player.x - barW/2, state.player.y - 60, barW, barH);
+                ctx.fillRect(state.player.x - barW / 2, state.player.y - 60, barW, barH);
                 ctx.fillStyle = '#00ffff';
-                ctx.fillRect(state.player.x - barW/2, state.player.y - 60, barW * progress, barH);
+                ctx.fillRect(state.player.x - barW / 2, state.player.y - 60, barW * progress, barH);
                 ctx.fillStyle = '#fff';
                 ctx.font = '10px Arial';
                 ctx.textAlign = 'center';
@@ -270,7 +241,7 @@ export class Renderer {
             ctx.shadowBlur = 10;
             ctx.shadowColor = XP_ORB_CONFIG.color;
             ctx.fill();
-            ctx.shadowBlur = 0; 
+            ctx.shadowBlur = 0;
         });
 
         state.flyingSwords.forEach(s => { ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.angle); ctx.fillStyle = '#ccffff'; ctx.shadowBlur = 15; ctx.shadowColor = '#00aaff'; ctx.fillRect(-15, -4, 30, 8); ctx.restore(); });

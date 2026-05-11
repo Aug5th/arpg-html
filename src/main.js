@@ -1,4 +1,14 @@
-import { BASE_STATS, WEAPONS, ENEMY_STATS, BOSS_CONFIG, VISUAL_CONFIG, LEVEL_CONFIG, XP_ORB_CONFIG, ITEMS, FOREST_ENEMIES } from './data/GameData.js';
+import {
+    BASE_STATS
+    , WEAPONS
+    , ENEMY_STATS
+    , BOSS_CONFIG
+    , VISUAL_CONFIG
+    , LEVEL_CONFIG
+    , XP_ORB_CONFIG
+    , ITEMS
+    , MAP_CONFIG
+} from './data/GameData.js';
 import { InputManager } from './systems/InputManager.js';
 import { UIManager } from './systems/UIManager.js';
 import { Renderer } from './utils/Renderer.js';
@@ -43,16 +53,60 @@ const state = {
     xpOrbs: [], cd: { lmb: 0, rmb: 0, s1: 0, s2: 0, s3: 0, dash: 0 },
     enemies: [], projectiles: [], vfxs: [], tornados: [], arrowRains: [], flyingSwords: [], mountains: [], boss: null,
     inventory: [], isMining: false, miningTimer: 0, miningTarget: null,
-    forestEnv: { enemies: [], herbs: [], ores: [], trees: [], portal: { x: 0, y: 0 } },
+
+    mapEnv: { herbs: [], ores: [], trees: [], portal: { x: 0, y: 0 }, decorations: [] },
 };
 
 const CRAFT_RECIPES = {
-    'helm_1': { id: 'helm_1', name: 'Nón Tu Sĩ', icon: '🪖', type: 'helmet', stats: { maxHp: 50 }, req: [{ id: 'herb', name: 'Linh Thảo', icon: '🌿', count: 5 }, { id: 'copper', name: 'Đồng Khoáng', icon: '🧱', count: 2 }] },
-    'armor_1': { id: 'armor_1', name: 'Thanh Y', icon: '🦺', type: 'armor', stats: { maxHp: 100, speed: 5 }, req: [{ id: 'herb', name: 'Linh Thảo', icon: '🌿', count: 8 }, { id: 'copper', name: 'Đồng Khoáng', icon: '🧱', count: 5 }] },
-    'gloves_1': { id: 'gloves_1', name: 'Hộ Thể Quyền', icon: '🧤', type: 'gloves', stats: { attack: 2 }, req: [{ id: 'herb', name: 'Linh Thảo', icon: '🌿', count: 3 }, { id: 'copper', name: 'Đồng Khoáng', icon: '🧱', count: 4 }] },
-    'boots_1': { id: 'boots_1', name: 'Tật Phong Hài', icon: '👢', type: 'boots', stats: { speed: 15 }, req: [{ id: 'herb', name: 'Linh Thảo', icon: '🌿', count: 5 }, { id: 'copper', name: 'Đồng Khoáng', icon: '🧱', count: 3 }] },
-    'ring_1': { id: 'ring_1', name: 'Huyết Ngọc Giới', icon: '💍', type: 'ring', stats: { attack: 5 }, req: [{ id: 'copper', name: 'Đồng Khoáng', icon: '🧱', count: 10 }] },
-    'neck_1': { id: 'neck_1', name: 'Tụ Linh Xuyến', icon: '📿', type: 'necklace', stats: { maxHp: 50, attack: 3 }, req: [{ id: 'herb', name: 'Linh Thảo', icon: '🌿', count: 10 }, { id: 'copper', name: 'Đồng Khoáng', icon: '🧱', count: 8 }] }
+    // =========================================================
+    // TIER 1: THANH DIỆP LÂM (Lv 1 - 10) - Tân Thủ Cấp
+    // =========================================================
+    'helm_1': { id: 'helm_1', name: 'Nón Trúc', icon: '🪖', type: 'helmet', stats: { maxHp: 50 }, req: [{ id: 'copper', name: 'Đồng Khoáng', icon: '🧱', count: 5 }, { id: 'boar_tusk', name: 'Nanh Heo Rừng', icon: '🦴', count: 3 }] },
+    'armor_1': { id: 'armor_1', name: 'Bì Giáp Sói', icon: '🦺', type: 'armor', stats: { maxHp: 150, speed: 5 }, req: [{ id: 'wolf_pelt', name: 'Da Sói', icon: '🟫', count: 8 }, { id: 'copper', name: 'Đồng Khoáng', icon: '🧱', count: 5 }] },
+    'gloves_1': { id: 'gloves_1', name: 'Sói Trảo Băng', icon: '🧤', type: 'gloves', stats: { attack: 5 }, req: [{ id: 'wolf_pelt', name: 'Da Sói', icon: '🟫', count: 4 }, { id: 'boar_tusk', name: 'Nanh Heo Rừng', icon: '🦴', count: 4 }] },
+    'boots_1': { id: 'boots_1', name: 'Tật Phong Hài', icon: '👢', type: 'boots', stats: { speed: 15 }, req: [{ id: 'wolf_pelt', name: 'Da Sói', icon: '🟫', count: 5 }, { id: 'copper', name: 'Đồng Khoáng', icon: '🧱', count: 3 }] },
+    'ring_1': { id: 'ring_1', name: 'Đồng Giới', icon: '💍', type: 'ring', stats: { attack: 8 }, req: [{ id: 'copper', name: 'Đồng Khoáng', icon: '🧱', count: 10 }] },
+    'neck_1': { id: 'neck_1', name: 'Nanh Sói Xuyến', icon: '📿', type: 'necklace', stats: { maxHp: 50, attack: 5 }, req: [{ id: 'boar_tusk', name: 'Nanh Heo Rừng', icon: '🦴', count: 8 }, { id: 'copper', name: 'Đồng Khoáng', icon: '🧱', count: 5 }] },
+
+    // =========================================================
+    // TIER 2: HUYỄN SA MẠC (Lv 20 - 30) - Trúc Cơ Cấp
+    // =========================================================
+    'helm_2': { id: 'helm_2', name: 'Thiết Sa Quán', icon: '🪖', type: 'helmet', stats: { maxHp: 200, attack: 10 }, req: [{ id: 'iron', name: 'Thiết Khoáng', icon: '🪨', count: 8 }, { id: 'scorpion_tail', name: 'Đuôi Bọ Cạp', icon: '🦂', count: 4 }] },
+    'armor_2': { id: 'armor_2', name: 'Độc Nhãn Giáp', icon: '🦺', type: 'armor', stats: { maxHp: 400, speed: 10 }, req: [{ id: 'iron', name: 'Thiết Khoáng', icon: '🪨', count: 12 }, { id: 'snake_venom', name: 'Nọc Rắn', icon: '🐍', count: 5 }] },
+    'gloves_2': { id: 'gloves_2', name: 'Độc Trảo Quyền', icon: '🧤', type: 'gloves', stats: { attack: 25 }, req: [{ id: 'snake_venom', name: 'Nọc Rắn', icon: '🐍', count: 8 }, { id: 'scorpion_tail', name: 'Đuôi Bọ Cạp', icon: '🦂', count: 5 }] },
+    'boots_2': { id: 'boots_2', name: 'Huyễn Sa Hài', icon: '👢', type: 'boots', stats: { speed: 25 }, req: [{ id: 'scorpion_tail', name: 'Đuôi Bọ Cạp', icon: '🦂', count: 6 }, { id: 'iron', name: 'Thiết Khoáng', icon: '🪨', count: 5 }] },
+    'ring_2': { id: 'ring_2', name: 'Hắc Thiết Giới', icon: '💍', type: 'ring', stats: { attack: 30 }, req: [{ id: 'iron', name: 'Thiết Khoáng', icon: '🪨', count: 15 }, { id: 'snake_venom', name: 'Nọc Rắn', icon: '🐍', count: 2 }] },
+    'neck_2': { id: 'neck_2', name: 'Độc Hạt Xuyến', icon: '📿', type: 'necklace', stats: { maxHp: 200, attack: 15 }, req: [{ id: 'scorpion_tail', name: 'Đuôi Bọ Cạp', icon: '🦂', count: 10 }, { id: 'iron', name: 'Thiết Khoáng', icon: '🪨', count: 8 }] },
+
+    // =========================================================
+    // TIER 3: CỰC HÀN BĂNG NGỤC (Lv 30 - 40) - Kim Đan Cấp
+    // =========================================================
+    'helm_3': { id: 'helm_3', name: 'Băng Tinh Mão', icon: '🪖', type: 'helmet', stats: { maxHp: 600, attack: 25 }, req: [{ id: 'ice_crystal', name: 'Băng Tinh', icon: '💎', count: 10 }, { id: 'yeti_fur', name: 'Lông Dã Nhân', icon: '🧥', count: 5 }] },
+    'armor_3': { id: 'armor_3', name: 'Tuyết Hùng Giáp', icon: '🦺', type: 'armor', stats: { maxHp: 1200, speed: 15 }, req: [{ id: 'yeti_fur', name: 'Lông Dã Nhân', icon: '🧥', count: 15 }, { id: 'ice_bear_claw', name: 'Móng Gấu', icon: '🐾', count: 5 }] },
+    'gloves_3': { id: 'gloves_3', name: 'Băng Hùng Quyền', icon: '🧤', type: 'gloves', stats: { attack: 60 }, req: [{ id: 'ice_bear_claw', name: 'Móng Gấu', icon: '🐾', count: 8 }, { id: 'ice_crystal', name: 'Băng Tinh', icon: '💎', count: 6 }] },
+    'boots_3': { id: 'boots_3', name: 'Đạp Tuyết Hài', icon: '👢', type: 'boots', stats: { speed: 40 }, req: [{ id: 'yeti_fur', name: 'Lông Dã Nhân', icon: '🧥', count: 8 }, { id: 'ice_crystal', name: 'Băng Tinh', icon: '💎', count: 5 }] },
+    'ring_3': { id: 'ring_3', name: 'Băng Tinh Giới', icon: '💍', type: 'ring', stats: { attack: 80 }, req: [{ id: 'ice_crystal', name: 'Băng Tinh', icon: '💎', count: 20 }] },
+    'neck_3': { id: 'neck_3', name: 'Băng Xuyên Xuyến', icon: '📿', type: 'necklace', stats: { maxHp: 600, attack: 40 }, req: [{ id: 'ice_bear_claw', name: 'Móng Gấu', icon: '🐾', count: 10 }, { id: 'yeti_fur', name: 'Lông Dã Nhân', icon: '🧥', count: 8 }] },
+
+    // =========================================================
+    // TIER 4: THÂM ĐÁY HẢI VỰC (Lv 40 - 50) - Nguyên Anh Cấp
+    // =========================================================
+    'helm_4': { id: 'helm_4', name: 'Cự Giải Quán', icon: '🪖', type: 'helmet', stats: { maxHp: 1500, attack: 60 }, req: [{ id: 'crab_shell', name: 'Mai Cua', icon: '🦀', count: 12 }, { id: 'pearl', name: 'Trân Châu', icon: '🦪', count: 5 }] },
+    'armor_4': { id: 'armor_4', name: 'Hải Long Giáp', icon: '🦺', type: 'armor', stats: { maxHp: 3000, speed: 20 }, req: [{ id: 'crab_shell', name: 'Mai Cua', icon: '🦀', count: 15 }, { id: 'shark_fin', name: 'Vây Cá Mập', icon: '🦈', count: 8 }] },
+    'gloves_4': { id: 'gloves_4', name: 'Cuồng Sa Quyền', icon: '🧤', type: 'gloves', stats: { attack: 150 }, req: [{ id: 'shark_fin', name: 'Vây Cá Mập', icon: '🦈', count: 10 }, { id: 'crab_shell', name: 'Mai Cua', icon: '🦀', count: 8 }] },
+    'boots_4': { id: 'boots_4', name: 'Lăng Ba Hài', icon: '👢', type: 'boots', stats: { speed: 60 }, req: [{ id: 'shark_fin', name: 'Vây Cá Mập', icon: '🦈', count: 8 }, { id: 'pearl', name: 'Trân Châu', icon: '🦪', count: 5 }] },
+    'ring_4': { id: 'ring_4', name: 'Trân Châu Giới', icon: '💍', type: 'ring', stats: { attack: 200 }, req: [{ id: 'pearl', name: 'Trân Châu', icon: '🦪', count: 25 }] },
+    'neck_4': { id: 'neck_4', name: 'Hải Uyên Xuyến', icon: '📿', type: 'necklace', stats: { maxHp: 1500, attack: 100 }, req: [{ id: 'pearl', name: 'Trân Châu', icon: '🦪', count: 15 }, { id: 'shark_fin', name: 'Vây Cá Mập', icon: '🦈', count: 5 }] },
+
+    // =========================================================
+    // TIER 5: LUYỆN NGỤC DIỆM SƠN (Lv 50 - 60) - Hóa Thần Cấp
+    // =========================================================
+    'helm_5': { id: 'helm_5', name: 'Hỏa Long Mão', icon: '🪖', type: 'helmet', stats: { maxHp: 4000, attack: 150 }, req: [{ id: 'obsidian', name: 'Hắc Diện Thạch', icon: '🖤', count: 15 }, { id: 'demon_horn', name: 'Sừng Ác Quỷ', icon: '😈', count: 5 }] },
+    'armor_5': { id: 'armor_5', name: 'Hỏa Long Chân Giáp', icon: '🦺', type: 'armor', stats: { maxHp: 8000, speed: 30 }, req: [{ id: 'dragon_scale', name: 'Vảy Rồng', icon: '🐉', count: 20 }, { id: 'obsidian', name: 'Hắc Diện Thạch', icon: '🖤', count: 10 }] },
+    'gloves_5': { id: 'gloves_5', name: 'Ác Quỷ Quyền', icon: '🧤', type: 'gloves', stats: { attack: 400 }, req: [{ id: 'demon_horn', name: 'Sừng Ác Quỷ', icon: '😈', count: 12 }, { id: 'dragon_scale', name: 'Vảy Rồng', icon: '🐉', count: 8 }] },
+    'boots_5': { id: 'boots_5', name: 'Cửu U Hài', icon: '👢', type: 'boots', stats: { speed: 80 }, req: [{ id: 'dragon_scale', name: 'Vảy Rồng', icon: '🐉', count: 10 }, { id: 'obsidian', name: 'Hắc Diện Thạch', icon: '🖤', count: 8 }] },
+    'ring_5': { id: 'ring_5', name: 'Hắc Diện Giới', icon: '💍', type: 'ring', stats: { attack: 600 }, req: [{ id: 'obsidian', name: 'Hắc Diện Thạch', icon: '🖤', count: 30 }] },
+    'neck_5': { id: 'neck_5', name: 'Chân Long Xuyến', icon: '📿', type: 'necklace', stats: { maxHp: 4000, attack: 300 }, req: [{ id: 'dragon_scale', name: 'Vảy Rồng', icon: '🐉', count: 15 }, { id: 'demon_horn', name: 'Sừng Ác Quỷ', icon: '😈', count: 10 }, { id: 'obsidian', name: 'Hắc Diện Thạch', icon: '🖤', count: 5 }] }
 };
 
 for (let i = 0; i < 30; i++) {
@@ -63,23 +117,16 @@ for (let i = 0; i < 30; i++) {
 input.onEscape = () => {
     if (!state.gameRunning || state.isDead || state.isVictory) return;
 
-    if (state.isEquipmentOpen || state.isInventoryOpen) {
+    if (state.isEquipmentOpen || state.isInventoryOpen || state.isBlacksmithOpen) {
         state.isEquipmentOpen = false;
         state.isInventoryOpen = false;
         state.isBlacksmithOpen = false;
         updateMenuVisibility();
-        return;
+        return; // Thoát luôn, không chạy xuống lệnh Pause bên dưới
     }
 
     state.isPaused = !state.isPaused;
     ui.toggleScreen('blocker', state.isPaused);
-
-    // // KIỂM TRA HIỆN NÚT VỀ LÀNG
-    // const exitBtn = document.getElementById('btn-exit-village');
-    // if (exitBtn) {
-    //     // Chỉ hiện nút nếu không ở Village
-    //     exitBtn.style.display = (state.currentMap !== 'village') ? 'block' : 'none';
-    // }
 
     if (!state.isPaused) {
         state.lastTime = performance.now();
@@ -102,10 +149,9 @@ input.onKeyDownAction = (k) => {
                 }
             } else if (distPortal < 120) {
                 if (state.selectedClass) {
-                    document.getElementById('teleport-map').style.display = 'flex';
-                    state.isPaused = true;
+                    window.openMapSelection();
                     document.getElementById('interaction-prompt').style.display = 'none';
-                } else alert("Bạn cần gặp Lão Nhân để thức tỉnh Pháp Khí trước khi rời làng!");
+                } else alert("Phàm nhân chưa có tu vi, bước vào Trận Pháp sẽ tan xương nát thịt!");
             } else if (distSmith < 120) {
                 if (state.selectedClass) {
                     window.openBlacksmith();
@@ -116,18 +162,24 @@ input.onKeyDownAction = (k) => {
             return;
         }
 
-        if (state.currentMap === 'forest') {
+        const farmMaps = ['forest', 'desert', 'ice', 'ocean', 'volcano'];
+        if (farmMaps.includes(state.currentMap)) {
             if (state.isMining) { state.isMining = false; return; }
-            const herb = state.forestEnv.herbs.find(h => Math.hypot(state.player.x - h.x, state.player.y - h.y) < 60);
+
+            const mapConfig = MAP_CONFIG[state.currentMap];
+
+            const herb = state.mapEnv.herbs.find(h => Math.hypot(state.player.x - h.x, state.player.y - h.y) < 60);
             if (herb) {
-                addItemToInventory(ITEMS ? ITEMS.HERB : null);
-                state.forestEnv.herbs = state.forestEnv.herbs.filter(h => h !== herb); return;
+                addItemToInventory(mapConfig.herb.item);
+                state.mapEnv.herbs = state.mapEnv.herbs.filter(h => h !== herb); return;
             }
-            const ore = state.forestEnv.ores.find(o => Math.hypot(state.player.x - o.x, state.player.y - o.y) < 60);
+
+            const ore = state.mapEnv.ores.find(o => Math.hypot(state.player.x - o.x, state.player.y - o.y) < 60);
             if (ore) {
                 state.isMining = true; state.miningTimer = 3.0; state.miningTarget = ore; return;
             }
-            const distPortal = Math.hypot(state.player.x - state.forestEnv.portal.x, state.player.y - state.forestEnv.portal.y);
+
+            const distPortal = Math.hypot(state.player.x - state.mapEnv.portal.x, state.player.y - state.mapEnv.portal.y);
             if (distPortal < 80) {
                 window.exitToVillage();
                 return;
@@ -225,6 +277,7 @@ function createSlash(px, py, ang, radius, arc, dmg, color, life) {
     state.vfxs.push({ x: px, y: py, angle: ang, radius: radius, arc: arc, life: life, maxLife: life, type: 'slash', color: color });
     checkConeDamage(px, py, ang, radius, arc, dmg);
 }
+
 function checkConeDamage(px, py, ang, radius, arc, dmg) {
     [...state.enemies, state.boss, ...state.mountains].forEach(e => {
         if (!e || e.hp <= 0) return;
@@ -236,6 +289,7 @@ function checkConeDamage(px, py, ang, radius, arc, dmg) {
         }
     });
 }
+
 function checkRectDamage(cx, cy, ang, len, wid, dmg) {
     const dx = Math.cos(ang), dy = Math.sin(ang);
     [...state.enemies, state.boss, ...state.mountains].forEach(e => {
@@ -244,28 +298,86 @@ function checkRectDamage(cx, cy, ang, len, wid, dmg) {
         if (Math.abs(vx * dx + vy * dy) <= len / 2 && Math.abs(vx * -dy + vy * dx) <= wid / 2) applyDamage(e, dmg);
     });
 }
-function applyDamage(entity, dmg) {
-    entity.hp -= dmg;
-    const dmgEl = ui.createDmgText(dmg, '#ffcc00', document.getElementById('damage-container'));
-    state.vfxs.push({ type: 'text', el: dmgEl, x: entity.x + (Math.random() - 0.5) * 40, y: entity.y, vy: -50, life: 1.0 });
-    for (let i = 0; i < 5; i++) state.vfxs.push({ type: 'particle', x: entity.x, y: entity.y, vx: Math.cos(Math.random() * 6.28) * (Math.random() * 200 + 50), vy: Math.sin(Math.random() * 6.28) * (Math.random() * 200 + 50), life: 0.5, color: '#ff0000' });
 
+function applyDamage(entity, baseDmg) {
+    // 1. TÍNH TOÁN BẠO KÍCH (CRIT)
+    let finalDmg = baseDmg;
+    let isCrit = false;
+    
+    // Tỷ lệ bạo kích (VD: player.crit = 15 -> 15%)
+    const critChance = (state.player.crit || 0) / 100;
+    if (Math.random() < critChance) {
+        finalDmg = finalDmg * 2; // Sát thương Bạo Kích x2
+        isCrit = true;
+    }
+    
+    finalDmg = Math.floor(finalDmg); // Làm tròn sát thương
+    entity.hp -= finalDmg;
+
+    // 2. TẠO CHỮ SÁT THƯƠNG
+    const color = isCrit ? '#ff3333' : '#ffcc00';
+    
+    // FIX LỖI NaN: Truyền số finalDmg gốc vào để hệ thống tính toán trước
+    const dmgEl = ui.createDmgText(finalDmg, color, document.getElementById('damage-container'));
+    
+    // SAU ĐÓ mới ghi đè nội dung và chỉnh CSS nếu là Bạo Kích
+    if (isCrit) {
+        dmgEl.innerText = `💥${finalDmg}`; 
+        dmgEl.style.fontSize = '35px';
+        dmgEl.style.fontWeight = '900';
+        dmgEl.style.textShadow = '0 0 15px #ff0000, 2px 2px 5px black';
+        dmgEl.style.zIndex = '50';
+    }
+
+    // Đẩy hiệu ứng text bay lên (Crit bay cao hơn, tồn tại lâu hơn 1 xíu)
+    state.vfxs.push({ type: 'text', el: dmgEl, x: entity.x + (Math.random() - 0.5) * 40, y: entity.y, vy: isCrit ? -80 : -50, life: isCrit ? 1.5 : 1.0 });
+    
+    // 3. HIỆU ỨNG MÁU VĂNG (Crit văng nhiều máu hơn)
+    const pCount = isCrit ? 15 : 5; 
+    for (let i = 0; i < pCount; i++) {
+        state.vfxs.push({ type: 'particle', x: entity.x, y: entity.y, vx: Math.cos(Math.random() * 6.28) * (Math.random() * 200 + 50), vy: Math.sin(Math.random() * 6.28) * (Math.random() * 200 + 50), life: 0.5, color: '#ff0000' });
+    }
+
+    // 4. LOGIC QUÁI CHẾT & RỚT ĐỒ (Giữ nguyên)
     if (entity.hp <= 0) {
-        if (entity === state.boss) { state.boss = null; state.isVictory = true; ui.toggleScreen('victory-screen', true); }
-        else if (state.enemies.includes(entity)) {
+        if (entity === state.boss) {
+            state.boss = null;
+            state.isVictory = true;
+            ui.toggleScreen('victory-screen', true);
+        } else if (state.enemies.includes(entity)) {
             state.xpOrbs.push({ x: entity.x, y: entity.y, value: Math.ceil(entity.maxHp * XP_ORB_CONFIG.xpPerEnemyHp), vx: (Math.random() - 0.5) * 100, vy: (Math.random() - 0.5) * 100 });
-            state.enemies = state.enemies.filter(en => en !== entity); state.kills++; document.getElementById('kill-count').innerText = state.kills;
-        } else if (state.mountains.includes(entity)) state.mountains = state.mountains.filter(m => m !== entity);
+            state.enemies = state.enemies.filter(en => en !== entity);
+            state.kills++;
+            
+            if (entity.drop && Math.random() < entity.dropRate) {
+                addItemToInventory(entity.drop);
+                
+                const dropEl = document.createElement('div');
+                dropEl.style.position = 'absolute';
+                dropEl.style.color = '#55ff55';
+                dropEl.style.fontWeight = 'bold';
+                dropEl.style.fontSize = '18px';
+                dropEl.style.textShadow = '1px 1px 3px black';
+                dropEl.style.pointerEvents = 'none';
+                dropEl.innerText = `+1 ${entity.drop.name}`;
+                
+                document.getElementById('damage-container').appendChild(dropEl);
+                state.vfxs.push({ type: 'text', el: dropEl, x: entity.x, y: entity.y - 30, vy: -40, life: 1.5 });
+            }
+        } else if (state.mountains.includes(entity)) {
+            state.mountains = state.mountains.filter(m => m !== entity);
+        }
     }
 }
+
 function takePlayerDamage(amount) {
     if (state.player.iFrames > 0 || state.isDead || state.isVictory) return;
     state.player.hp = Math.max(0, state.player.hp - amount); state.player.iFrames = 0.5; ui.updateHp(state.player.hp, state.player.maxHp);
     const dmgEl = ui.createDmgText(amount, '#ff0000', document.getElementById('damage-container'));
     state.vfxs.push({ type: 'text', el: dmgEl, x: state.player.x + (Math.random() - 0.5) * 40, y: state.player.y, vy: -50, life: 1.0 });
-    if (state.player.hp <= 0) { 
-        state.isDead = true; 
-        ui.toggleScreen('game-over-screen', true); 
+    if (state.player.hp <= 0) {
+        state.isDead = true;
+        ui.toggleScreen('game-over-screen', true);
     }
 }
 
@@ -279,10 +391,24 @@ function spawnDungeonEnemy() {
     state.enemies.push({ x: state.player.x + Math.cos(ang) * dist, y: state.player.y + Math.sin(ang) * dist, hp: hp, maxHp: hp, speed: speed, size: ENEMY_STATS.size, damage: damage, name: randomName });
 }
 
-function spawnForestEnemy() {
-    const ang = Math.random() * Math.PI * 2; const dist = Math.max(canvas.width, canvas.height) / 2 + 100;
-    const stats = Math.random() > 0.5 ? FOREST_ENEMIES.WOLF : FOREST_ENEMIES.BOAR;
-    state.enemies.push({ x: state.player.x + Math.cos(ang) * dist, y: state.player.y + Math.sin(ang) * dist, hp: stats.hp, maxHp: stats.hp, speed: stats.speed, size: 40, damage: stats.damage, name: stats.name });
+function spawnMapEnemy() {
+    if (state.enemies.length >= 15) return;
+    const mapConfig = MAP_CONFIG[state.currentMap];
+    if (!mapConfig) return;
+
+    // Bốc random 1 con quái trong danh sách của map hiện tại
+    const enemyTemplate = mapConfig.enemies[Math.floor(Math.random() * mapConfig.enemies.length)];
+
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 600 + Math.random() * 200;
+
+    state.enemies.push({
+        ...enemyTemplate, // Clone mọi chỉ số (hp, dame, drop...)
+        maxHp: enemyTemplate.hp,
+        x: state.player.x + Math.cos(angle) * dist,
+        y: state.player.y + Math.sin(angle) * dist,
+        vx: 0, vy: 0, size: 30
+    });
 }
 
 function spawnBoss() {
@@ -291,11 +417,22 @@ function spawnBoss() {
     ui.setElementDisplay('boss-ui', 'flex');
 }
 
+const MAX_INV_SLOTS = 40; // Mở rộng lên 40 ô
 function addItemToInventory(item) {
-    if (!item) return;
+    if (!item) return false;
     const existing = state.inventory.find(i => i.id === item.id);
-    if (existing) existing.count++; else state.inventory.push({ ...item, count: 1 });
+
+    if (existing) {
+        existing.count++;
+    } else {
+        // Kiểm tra nếu túi đã chạm mốc 40 ô
+        if (state.inventory.length >= MAX_INV_SLOTS) {
+            return false; // Trả về false báo hiệu nhặt thất bại
+        }
+        state.inventory.push({ ...item, count: 1 });
+    }
     window.updateInventoryUI();
+    return true;
 }
 
 window.updateInventoryUI = () => {
@@ -303,12 +440,24 @@ window.updateInventoryUI = () => {
     if (!grid) return;
     grid.innerHTML = '';
 
-    // Vẽ 16 ô túi đồ
-    for (let i = 0; i < 16; i++) {
+    // Ép CSS để Lưới (Grid) chứa được 40 ô và hiển thị thanh cuộn (Scrollbar)
+    grid.style.display = 'grid';
+    grid.style.gridTemplateColumns = 'repeat(5, 1fr)'; // Hiển thị 5 cột
+    grid.style.gap = '8px';
+    grid.style.overflowY = 'auto'; // Bật thanh cuộn dọc
+    grid.style.maxHeight = '280px'; // Giới hạn chiều cao để không trào ra khỏi bảng UI
+    grid.style.paddingRight = '5px';
+
+    // Vẽ 40 ô túi đồ
+    for (let i = 0; i < MAX_INV_SLOTS; i++) {
         const item = state.inventory[i];
         if (item) {
+            // Hiển thị viền màu phẩm chất cho Trang bị (Đã update ở bài trước)
+            const borderColor = item.isEquipment && item.color ? item.color : '#444';
+            const shadow = item.rarity === 'epic' || item.rarity === 'rare' ? `box-shadow: 0 0 10px ${borderColor} inset;` : '';
+
             grid.innerHTML += `
-                <div class="inv-slot" style="cursor: ${item.isEquipment ? 'pointer' : 'default'};"
+                <div class="inv-slot" style="cursor: ${item.isEquipment ? 'pointer' : 'default'}; border: 1px solid ${borderColor}; ${shadow}"
                      onmouseenter="window.showItemTooltip(event, ${i})"
                      onmouseleave="window.hideItemTooltip()"
                      onmousemove="window.moveItemTooltip(event)"
@@ -317,46 +466,80 @@ window.updateInventoryUI = () => {
                     <div class="item-count">${item.count > 1 ? item.count : ''}</div>
                 </div>`;
         } else {
+            // Ô trống
             grid.innerHTML += `<div class="inv-slot" style="background: rgba(0,0,0,0.3); border: 1px dashed #444;"></div>`;
         }
     }
 }
 
-function initForestMap() {
-    state.enemies = []; state.projectiles = []; state.xpOrbs = [];
-    state.forestEnv.herbs = []; state.forestEnv.ores = []; state.forestEnv.trees = []; state.forestEnv.decorations = [];
+function initFarmMap(mapId) {
+    state.enemies = []; state.projectiles = []; state.xpOrbs = []; state.vfxs = [];
+    state.mapEnv.herbs = []; state.mapEnv.ores = []; state.mapEnv.trees = []; state.mapEnv.decorations = [];
 
-    // 1. Dựng hàng rào cây cối (Giới hạn Map: 3200px)
-    const mapLimit = 3200;
+    const mapLimit = 1600;
+    const config = MAP_CONFIG[mapId];
+
     for (let i = -mapLimit; i <= mapLimit; i += 60) {
-        state.forestEnv.trees.push({ x: i, y: -mapLimit }); // Viền trên
-        state.forestEnv.trees.push({ x: i, y: mapLimit });  // Viền dưới
-        state.forestEnv.trees.push({ x: -mapLimit, y: i }); // Viền trái
-        state.forestEnv.trees.push({ x: mapLimit, y: i });  // Viền phải
+        state.mapEnv.trees.push({ x: i, y: -mapLimit });
+        state.mapEnv.trees.push({ x: i, y: mapLimit });
+        state.mapEnv.trees.push({ x: -mapLimit, y: i });
+        state.mapEnv.trees.push({ x: mapLimit, y: i });
     }
 
     for (let i = 0; i < 400; i++) {
-        let rx = (Math.random() - 0.5) * 6100;
-        let ry = (Math.random() - 0.5) * 6100;
-        // Có 3 loại: 0 (Cỏ rêu), 1 (Đá sỏi), 2 (Đom đóm mờ)
-        let type = Math.floor(Math.random() * 3);
-        state.forestEnv.decorations.push({ x: rx, y: ry, type: type });
+        let rx = (Math.random() - 0.5) * 3100;
+        let ry = (Math.random() - 0.5) * 3100;
+        state.mapEnv.decorations.push({ x: rx, y: ry, type: Math.floor(Math.random() * 3) });
     }
 
-    // 2. Sinh 16 Thảo dược rải rác (Bán kính từ -3000 đến 3000)
-    while (state.forestEnv.herbs.length < 16) {
-        let rx = (Math.random() - 0.5) * 6000; 
-        let ry = (Math.random() - 0.5) * 6000;
-        if (Math.hypot(rx, ry) > 250) state.forestEnv.herbs.push({ x: rx, y: ry });
+    while (state.mapEnv.herbs.length < 16) {
+        let rx = (Math.random() - 0.5) * 3000; let ry = (Math.random() - 0.5) * 3000;
+        if (Math.hypot(rx, ry) > 250) state.mapEnv.herbs.push({ x: rx, y: ry });
     }
 
-    // 3. Sinh 10 Mỏ khoáng rải rác
-    while (state.forestEnv.ores.length < 10) {
-        let rx = (Math.random() - 0.5) * 6000;
-        let ry = (Math.random() - 0.5) * 6000;
-        if (Math.hypot(rx, ry) > 300) state.forestEnv.ores.push({ x: rx, y: ry });
+    while (state.mapEnv.ores.length < 10) {
+        let rx = (Math.random() - 0.5) * 3000; let ry = (Math.random() - 0.5) * 3000;
+        if (Math.hypot(rx, ry) > 300) state.mapEnv.ores.push({ x: rx, y: ry });
     }
 }
+
+window.teleportToMap = (mapId) => {
+    const map = MAP_CONFIG[mapId];
+
+    // Kiểm tra level một lần nữa cho chắc chắn
+    if (state.player.level < map.minLv) {
+        alert(`Tu vi chưa đủ! Cần đạt Cấp ${map.minLv} để vào ${map.name}`);
+        return;
+    }
+
+    window.closeMapSelection();
+    window.clearMapState();
+
+    state.currentMap = mapId;
+
+    if (mapId === 'dungeon') {
+        // Logic vào Map Boss
+        window.changeScene('scene-dungeon');
+        document.getElementById('score-board').style.display = 'flex';
+        state.playTime = 0;
+    } else {
+        // Logic vào các Map Farm
+        window.changeScene('scene-forest');
+        initFarmMap(mapId);
+    }
+
+    document.getElementById('global-player-hud').style.display = 'block';
+    document.getElementById('skill-panel').style.display = 'flex';
+    state.player.x = 0; state.player.y = 80;
+
+    ui.updateHp(state.player.hp, state.player.maxHp);
+    ui.updateLevel(state.player.level);
+
+    // Bắt đầu lại Game Loop
+    state.isPaused = false;
+    state.lastTime = performance.now();
+    requestAnimationFrame(gameLoop);
+};
 
 window.clearMapState = () => {
 
@@ -388,8 +571,8 @@ window.clearMapState = () => {
     state.playTime = 0;
 
     // 4. Reset máu của quái vật map rừng (nếu có)
-    state.forestEnv.herbs = [];
-    state.forestEnv.ores = [];
+    state.mapEnv.herbs = [];
+    state.mapEnv.ores = [];
 };
 
 // --- GAME LOOP ---
@@ -437,41 +620,44 @@ function update(dt) {
         if (state.promptTimer > 0) { state.promptTimer -= dt; if (state.promptTimer <= 0) document.getElementById('interaction-prompt').style.display = 'none'; }
     }
 
-    // ----- LOGIC MAP THANH DIỆP LÂM -----
-    if (state.currentMap === 'forest') {
-        // THÊM: Chặn Player không cho vượt qua hàng rào cây
-        const LIMIT = 3160; 
-        p.x = Math.max(-LIMIT, Math.min(LIMIT, p.x)); 
+    // ----- LOGIC MAP FARM NGUYÊN LIỆU -----
+    const farmMaps = ['forest', 'desert', 'ice', 'ocean', 'volcano'];
+    if (farmMaps.includes(state.currentMap)) {
+        const mapConfig = MAP_CONFIG[state.currentMap];
+
+        // Chặn Player không cho vượt qua hàng rào (dùng 1560 vì mapLimit = 1600)
+        const LIMIT = 1560;
+        p.x = Math.max(-LIMIT, Math.min(LIMIT, p.x));
         p.y = Math.max(-LIMIT, Math.min(LIMIT, p.y));
-        
+
         const promptEl = document.getElementById('interaction-prompt');
         let canInteract = false;
 
-        const distPortal = Math.hypot(p.x - state.forestEnv.portal.x, p.y - state.forestEnv.portal.y);
-        
+        const distPortal = Math.hypot(p.x - state.mapEnv.portal.x, p.y - state.mapEnv.portal.y);
+
         if (state.isMining) {
             promptEl.innerText = "BẤM [E] ĐỂ HỦY ĐÀO"; canInteract = true;
             state.miningTimer -= dt;
             if (state.miningTimer <= 0) {
-                if (ITEMS && ITEMS.COPPER) addItemToInventory(ITEMS.COPPER);
-                state.forestEnv.ores = state.forestEnv.ores.filter(o => o !== state.miningTarget);
+                // Nhận đúng loại khoáng của map hiện tại
+                addItemToInventory(mapConfig.ore.item);
+                state.mapEnv.ores = state.mapEnv.ores.filter(o => o !== state.miningTarget);
                 state.isMining = false;
             }
-        } 
-        // THÊM: Hiện chữ Bấm E khi đứng gần Portal
+        }
         else if (distPortal < 80) {
             promptEl.innerText = "BẤM [E] ĐỂ VỀ LÀNG"; canInteract = true;
-        } 
+        }
         else {
-            const closeHerb = state.forestEnv.herbs.find(h => Math.hypot(p.x - h.x, p.y - h.y) < 60);
-            const closeOre = state.forestEnv.ores.find(o => Math.hypot(p.x - o.x, p.y - o.y) < 60);
-            if (closeHerb) { promptEl.innerText = "BẤM [E] ĐỂ HÁI LINH THẢO"; canInteract = true; }
-            else if (closeOre) { promptEl.innerText = "BẤM [E] ĐỂ ĐÀO ĐỒNG KHOÁNG"; canInteract = true; }
+            const closeHerb = state.mapEnv.herbs.find(h => Math.hypot(p.x - h.x, p.y - h.y) < 60);
+            const closeOre = state.mapEnv.ores.find(o => Math.hypot(p.x - o.x, p.y - o.y) < 60);
+            if (closeHerb) { promptEl.innerText = `BẤM [E] ĐỂ HÁI ${mapConfig.herb.item.name.toUpperCase()}`; canInteract = true; }
+            else if (closeOre) { promptEl.innerText = `BẤM [E] ĐỂ ĐÀO ${mapConfig.ore.item.name.toUpperCase()}`; canInteract = true; }
         }
         promptEl.style.display = canInteract ? 'block' : 'none';
 
         state.lastSpawn += dt;
-        if (state.lastSpawn > 3.0) { spawnForestEnemy(); state.lastSpawn = 0; }
+        if (state.lastSpawn > 3.0) { spawnMapEnemy(); state.lastSpawn = 0; }
     }
 
     // ----- LOGIC MAP MA TÔN VỰC (DUNGEON) -----
@@ -517,7 +703,7 @@ function update(dt) {
     }
 
     // ----- COMMON COMBAT LOGIC -----
-    if (state.currentMap === 'dungeon' || state.currentMap === 'forest') {
+    if (state.currentMap !== 'village') {
         for (let k in state.cd) { if (state.cd[k] > 0) { state.cd[k] -= dt; if (state.cd[k] <= 0) state.cd[k] = 0; if (state.selectedClass) ui.updateCd(k, state.cd[k], getSkillCd(k)); } }
 
         state.enemies.forEach(e => {
@@ -608,7 +794,7 @@ window.startVillage = (isLoad = false) => {
 
     if (!isLoad) {
         state.selectedClass = null;
-        state.player = { x: 0, y: 0, angle: 0, speed: 150, hp: 100, maxHp: 100, attack: 5, attackSpeed: 1, level: 1, exp: 0, nextLevelExp: 100, iFrames: 0, isDashing: false, dashTime: 0, dashDir: { x: 0, y: 0 }, equipment: { weapon: null, helmet: null, armor: null, gloves: null, boots: null, ring1: null, ring2: null, necklace: null, mount: null } };
+        state.player = { x: 0, y: 0, angle: 0, speed: 150, hp: 100, maxHp: 100, attack: 5, attackSpeed: 1, crit: 0, level: 1, exp: 0, nextLevelExp: 100, iFrames: 0, isDashing: false, dashTime: 0, dashDir: { x: 0, y: 0 }, equipment: { weapon: null, helmet: null, armor: null, gloves: null, boots: null, ring1: null, ring2: null, necklace: null, mount: null } };
     } else {
         // Đưa người chơi về chính giữa làng
         state.player.x = 0;
@@ -680,42 +866,234 @@ window.exitToVillage = () => {
 };
 
 // ================= HỆ THỐNG LÒ RÈN =================
+
+
+// --- HỆ THỐNG ROLL OPTIONS (CHỈ SỐ PHỤ) ---
+const RARITY_COLORS = {
+    'normal': '#cccccc',   // Trắng (Thường)
+    'magic': '#33ff55',    // Xanh lá (Tốt)
+    'rare': '#cc33ff',     // Tím (Hiếm)
+    'epic': '#ffaa00'      // Vàng (Tuyệt Phẩm)
+};
+
+function generateRandomSubStats(tier) {
+    // 1. Roll Phẩm chất (Rarity)
+    const roll = Math.random();
+    let rarity, maxStats, multiplier;
+
+    if (roll < 0.05) { rarity = 'epic'; maxStats = 3; multiplier = 2.0; } // 5% ra Tuyệt Phẩm
+    else if (roll < 0.20) { rarity = 'rare'; maxStats = 2; multiplier = 1.5; } // 15% ra Hiếm
+    else if (roll < 0.60) { rarity = 'magic'; maxStats = 1; multiplier = 1.0; } // 40% ra Tốt
+    else { rarity = 'normal'; maxStats = 0; multiplier = 0; } // 40% ra Thường (Không có dòng phụ)
+
+    let subStats = [];
+    if (maxStats > 0) {
+        // Danh sách các dòng phụ có thể roll ra (scale theo Bậc của trang bị)
+        const possibleOptions = [
+            { type: 'maxHp', name: 'Máu tối đa', val: Math.floor((Math.random() * 50 + 20) * tier * multiplier) },
+            { type: 'attack', name: 'Công kích', val: Math.floor((Math.random() * 10 + 5) * tier * multiplier) },
+            { type: 'speed', name: 'Tốc chạy', val: Math.floor((Math.random() * 5 + 2) * multiplier) },
+            { type: 'crit', name: 'Tỷ lệ bạo kích', val: Math.floor((Math.random() * 3 + 1) * multiplier) } // %
+        ];
+
+        // Xáo trộn và bốc ngẫu nhiên số lượng dòng theo Rarity
+        possibleOptions.sort(() => 0.5 - Math.random());
+        for (let i = 0; i < maxStats; i++) {
+            subStats.push(possibleOptions[i]);
+        }
+    }
+
+    return { rarity: rarity, stats: subStats, color: RARITY_COLORS[rarity] };
+}
+
+
+state.currentBlacksmithTier = 1; // Mặc định là Bậc 1
+
+window.switchBlacksmithTab = (tier) => {
+    state.currentBlacksmithTier = tier;
+
+    // 1. Cập nhật màu sắc các nút Tab
+    for (let i = 1; i <= 5; i++) {
+        const btn = document.getElementById(`bs-tab-${i}`);
+        if (i === tier) {
+            btn.style.borderColor = '#ffaa00';
+            btn.style.color = '#ffaa00';
+            btn.style.background = 'rgba(255, 170, 0, 0.1)';
+        } else {
+            btn.style.borderColor = '#555';
+            btn.style.color = '#aaa';
+            btn.style.background = 'transparent';
+        }
+    }
+
+    // 2. Đổ dữ liệu các thẻ Card Trang Bị
+    const container = document.getElementById('bs-card-container');
+    container.innerHTML = ''; // Dọn sạch card cũ
+
+    for (let key in CRAFT_RECIPES) {
+        if (!key.endsWith('_' + tier)) continue;
+
+        const item = CRAFT_RECIPES[key];
+
+        let statsStr = "";
+        if (item.stats.maxHp) statsStr += `❤️ HP: +${item.stats.maxHp}<br>`;
+        if (item.stats.attack) statsStr += `⚔️ Công: +${item.stats.attack}<br>`;
+        if (item.stats.speed) statsStr += `👟 Tốc: +${item.stats.speed}`;
+
+        let matStr = "";
+        let canCraft = true;
+        item.req.forEach(r => {
+            // FIX TẠI ĐÂY: Tìm đúng vật phẩm trong mảng Inventory
+            const invItem = state.inventory.find(i => i.id === r.id);
+            const count = invItem ? invItem.count : 0;
+            const isEnough = count >= r.count;
+            if (!isEnough) canCraft = false;
+
+            matStr += `
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px;">
+                    <span style="font-size: 13px; color: #ccc;">${r.icon} ${r.name}</span>
+                    <span style="font-size: 13px; font-weight: bold; color: ${isEnough ? '#00ff00' : '#ff3333'};">${count}/${r.count}</span>
+                </div>
+            `;
+        });
+
+        container.innerHTML += `
+            <div class="class-card" style="width: 155px; padding: 10px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid ${canCraft ? '#ffaa00' : '#444'}; background: rgba(0,0,0,0.6); border-radius: 8px;">
+                <div>
+                    <div style="font-size: 35px; text-align: center; margin-bottom: 5px;">${item.icon}</div>
+                    <div class="class-title" style="font-size: 15px; color: #ffaa00; text-align: center; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</div>
+                    
+                    <div style="font-size: 11px; color: #00ffff; background: rgba(0, 255, 255, 0.05); padding: 5px; border-radius: 5px; margin-bottom: 8px; text-align: center; min-height: 35px; display: flex; flex-direction: column; justify-content: center; line-height: 1.4;">
+                        ${statsStr}
+                    </div>
+                    
+                    <div style="background: rgba(0, 0, 0, 0.4); padding: 5px; border-radius: 5px; min-height: 50px;">
+                        ${matStr}
+                    </div>
+                </div>
+                
+                <button class="btn" style="margin-top: 10px; padding: 6px; width: 100%; font-size: 11px; border-color: ${canCraft ? '#00ff00' : '#555'}; color: ${canCraft ? '#00ff00' : '#555'}; pointer-events: ${canCraft ? 'auto' : 'none'};" 
+                    onclick="window.executeCraft('${key}')">
+                    ${canCraft ? 'RÈN ĐÚC' : 'THIẾU VẬT LIỆU'}
+                </button>
+            </div>
+        `;
+    }
+};
+
+window.executeCraft = (key) => {
+    const item = CRAFT_RECIPES[key];
+
+    // ==========================================
+    // 0. KIỂM TRA ĐIỀU KIỆN TÚI ĐẦY TRƯỚC KHI RÈN
+    // ==========================================
+    let slotsUsed = state.inventory.length;
+
+    item.req.forEach(r => {
+        const invItem = state.inventory.find(i => i.id === r.id);
+        // Nếu số lượng khoáng thạch dùng bằng đúng số đang có trong túi, ta sẽ mất ô đó -> trống 1 ô
+        if (invItem && invItem.count <= r.count) {
+            slotsUsed--;
+        }
+    });
+
+    if (slotsUsed >= MAX_INV_SLOTS) {
+        // Bắn chữ cảnh báo màu đỏ chói giữa màn hình
+        const errEl = document.createElement('div');
+        errEl.style.position = 'absolute';
+        errEl.style.color = '#ff3333';
+        errEl.style.fontWeight = 'bold';
+        errEl.style.fontSize = '26px';
+        errEl.style.textShadow = '0 0 15px #ff3333, 2px 2px 5px black';
+        errEl.style.pointerEvents = 'none';
+        errEl.style.zIndex = '100';
+        errEl.style.left = '50%';
+        errEl.style.top = '50%';
+        errEl.style.transform = 'translate(-50%, -50%)';
+        errEl.innerText = `❌ Túi đồ đã đầy! Vui lòng bán hoặc dọn dẹp.`;
+        document.body.appendChild(errEl);
+
+        let life = 1.0; let posY = 50;
+        const anim = setInterval(() => {
+            life -= 0.05; posY += 2;
+            errEl.style.top = `calc(50% - ${posY}px)`;
+            errEl.style.opacity = life;
+            if (life <= 0) { clearInterval(anim); errEl.remove(); }
+        }, 50);
+
+        return; // Dừng việc chế tạo lại ngay lập tức
+    }
+    // ==========================================
+
+    item.req.forEach(r => {
+        const invItem = state.inventory.find(i => i.id === r.id);
+        if (invItem) invItem.count -= r.count;
+    });
+
+    state.inventory = state.inventory.filter(i => i.count > 0);
+    window.updateInventoryUI();
+
+    // --- THÊM LOGIC ĐỔ XÚC XẮC Ở ĐÂY ---
+    const options = generateRandomSubStats(state.currentBlacksmithTier);
+
+    // Cộng gộp dòng chính (stats) và dòng phụ (subStats) lại
+    const finalStats = { ...item.stats };
+    options.stats.forEach(opt => {
+        if (!finalStats[opt.type]) finalStats[opt.type] = 0;
+        finalStats[opt.type] += opt.val;
+    });
+
+    addItemToInventory({
+        id: item.id + '_' + Date.now(), // Thêm Date.now để mỗi món đồ là duy nhất (không bị gộp dồn trong túi)
+        name: item.name,
+        icon: item.icon,
+        type: item.type,
+        stats: finalStats,           // Chỉ số đã được cộng gộp
+        subOptions: options.stats,   // Lưu lại dòng phụ để hiển thị
+        rarity: options.rarity,      // Lưu lại phẩm chất
+        color: options.color,        // Lưu màu viền
+        isEquipment: true
+    });
+
+    // Cập nhật dòng chữ thông báo theo màu phẩm chất
+    const notiEl = document.createElement('div');
+    notiEl.style.position = 'absolute';
+    notiEl.style.color = options.color; // Chữ sáng theo màu Tuyệt phẩm, Hiếm...
+    notiEl.style.fontWeight = 'bold';
+    notiEl.style.fontSize = '30px';
+    notiEl.style.textShadow = `0 0 15px ${options.color}, 2px 2px 5px black`;
+    notiEl.style.pointerEvents = 'none';
+    notiEl.style.zIndex = '100';
+    notiEl.style.left = '50%';
+    notiEl.style.top = '50%';
+    notiEl.style.transform = 'translate(-50%, -50%)';
+
+    // Thay đổi thông báo nếu ra đồ ngon
+    let prefix = "";
+    if (options.rarity === 'epic') prefix = "🎉 Cực Phẩm: ";
+    else if (options.rarity === 'rare') prefix = "✨ Trân Phẩm: ";
+
+    notiEl.innerText = `${prefix} Chế tạo thành công: ${item.name}!`;
+    document.body.appendChild(notiEl);
+
+    let life = 1.0; let posY = 50;
+    const anim = setInterval(() => {
+        life -= 0.05; posY += 2;
+        notiEl.style.top = `calc(50% - ${posY}px)`;
+        notiEl.style.opacity = life;
+        if (life <= 0) { clearInterval(anim); notiEl.remove(); }
+    }, 50);
+
+    window.switchBlacksmithTab(state.currentBlacksmithTier);
+};
+
 window.openBlacksmith = () => {
     state.isBlacksmithOpen = true;
     document.getElementById('interaction-prompt').style.display = 'none';
     updateMenuVisibility();
 
-    const listEl = document.getElementById('craft-list');
-    listEl.innerHTML = '';
-
-    // Vẽ danh sách item bên trái
-    const typeVN = {
-        'helmet': 'Nón',
-        'armor': 'Áo giáp',
-        'gloves': 'Bao tay',
-        'boots': 'Giày',
-        'ring': 'Nhẫn',
-        'necklace': 'Dây chuyền'
-    };
-
-    for (let key in CRAFT_RECIPES) {
-        const item = CRAFT_RECIPES[key];
-        const loaiVN = typeVN[item.type] || item.type; // Dịch tên loại
-
-        listEl.innerHTML += `
-            <div class="craft-item-row" style="display: flex; align-items: center; padding: 8px; margin-bottom: 5px; background: rgba(255,255,255,0.05); border-radius: 5px; cursor: pointer; border: 1px solid transparent; transition: 0.2s;" 
-                 onclick="window.selectCraftItem('${key}')" id="craft-row-${key}"
-                 onmouseover="this.style.background='rgba(255,170,0,0.2)'" onmouseout="if(state.selectedCraftId !== '${key}') this.style.background='rgba(255,255,255,0.05)'">
-                 
-                <div style="font-size: 20px; margin-right: 12px; width: 30px; text-align: center;">${item.icon}</div>
-                <div style="text-align: left;">
-                    <div style="color: #fff; font-weight: bold; font-size: 14px;">${item.name}</div>
-                    <div style="color: #888; font-size: 11px;">Loại: ${loaiVN}</div>
-                </div>
-            </div>
-        `;
-    }
-    window.selectCraftItem('helm_1'); // Mặc định chọn món đầu tiên
+    // Luôn load dữ liệu Bậc hiện tại khi mở Lò Rèn
+    window.switchBlacksmithTab(state.currentBlacksmithTier);
 };
 
 window.closeBlacksmith = () => {
@@ -723,130 +1101,123 @@ window.closeBlacksmith = () => {
     updateMenuVisibility();
 };
 
-window.selectCraftItem = (key) => {
-    state.selectedCraftId = key;
-    const item = CRAFT_RECIPES[key];
+// MAP SECLECTION
 
-    // Reset background của list
-    document.querySelectorAll('.craft-item-row').forEach(el => {
-        el.style.background = 'rgba(255,255,255,0.05)';
-        el.style.borderColor = 'transparent';
-    });
-    const selectedRow = document.getElementById(`craft-row-${key}`);
-    if (selectedRow) {
-        selectedRow.style.background = 'rgba(255,170,0,0.2)';
-        selectedRow.style.borderColor = '#ffaa00';
-    }
+window.switchPortalTab = (tab) => {
+    const btnFarm = document.getElementById('tab-btn-farm');
+    const btnEvent = document.getElementById('tab-btn-event');
+    const tabFarm = document.getElementById('portal-tab-farm');
+    const tabEvent = document.getElementById('portal-tab-event');
 
-    // Hiển thị chi tiết
-    document.getElementById('craft-icon').innerText = item.icon;
-    document.getElementById('craft-name').innerText = item.name;
-
-    let statsStr = '';
-    if (item.stats.maxHp) statsStr += `Máu tối đa: +${item.stats.maxHp} &nbsp;&nbsp;`;
-    if (item.stats.attack) statsStr += `Sát thương: +${item.stats.attack} &nbsp;&nbsp;`;
-    if (item.stats.speed) statsStr += `Tốc độ: +${item.stats.speed}`;
-    document.getElementById('craft-stats').innerHTML = statsStr;
-
-    // Kiểm tra nguyên liệu
-    const matEl = document.getElementById('craft-materials');
-    matEl.innerHTML = '';
-    let canCraft = true;
-
-    item.req.forEach(req => {
-        const invItem = state.inventory.find(i => i.id === req.id);
-        const currentCount = invItem ? invItem.count : 0;
-        const color = currentCount >= req.count ? '#00ff00' : '#ff3333';
-        if (currentCount < req.count) canCraft = false;
-
-        matEl.innerHTML += `
-            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 3px;">
-                <span>${req.icon} ${req.name}</span>
-                <span style="color: ${color}; font-weight: bold;">${currentCount} / ${req.count}</span>
-            </div>
-        `;
-    });
-
-    const btn = document.getElementById('btn-craft');
-    if (canCraft) {
-        btn.style.opacity = '1'; btn.style.cursor = 'pointer';
-        btn.style.boxShadow = '0 0 15px rgba(0,255,0,0.5)';
+    if (tab === 'farm') {
+        btnFarm.style.borderColor = '#00ffff'; btnFarm.style.color = '#00ffff';
+        btnEvent.style.borderColor = '#555'; btnEvent.style.color = '#aaa';
+        tabFarm.style.display = 'flex';
+        tabEvent.style.display = 'none';
     } else {
-        btn.style.opacity = '0.5'; btn.style.cursor = 'not-allowed';
-        btn.style.boxShadow = 'none';
+        btnEvent.style.borderColor = '#00ffff'; btnEvent.style.color = '#00ffff';
+        btnFarm.style.borderColor = '#555'; btnFarm.style.color = '#aaa';
+        tabEvent.style.display = 'flex';
+        tabFarm.style.display = 'none';
     }
 };
 
-window.doCraft = () => {
-    if (!state.selectedCraftId) return;
-    const item = CRAFT_RECIPES[state.selectedCraftId];
+window.openMapSelection = () => {
+    state.isPaused = true;
+    document.getElementById('map-selection-panel').style.display = 'flex';
+    document.getElementById('interaction-prompt').style.display = 'none';
 
-    // Kiểm tra lại lần cuối
-    let canCraft = true;
-    item.req.forEach(req => {
-        const invItem = state.inventory.find(i => i.id === req.id);
-        if (!invItem || invItem.count < req.count) canCraft = false;
-    });
+    window.switchPortalTab('farm'); // Mặc định mở Tab Farm
 
-    if (!canCraft) return;
+    const farmTab = document.getElementById('portal-tab-farm');
+    const eventTab = document.getElementById('portal-tab-event');
 
-    // Kiểm tra túi đồ có bị đầy không (giới hạn 16 ô)
-    if (state.inventory.length >= 16) {
-        alert("Túi đồ đã đầy! Hãy dọn dẹp trước khi chế tạo.");
-        return;
+    farmTab.innerHTML = '';
+    eventTab.innerHTML = '';
+
+    for (const key in MAP_CONFIG) {
+        const map = MAP_CONFIG[key];
+        const canEnter = state.player.level >= map.minLv;
+
+        // Tạo HTML cho Card
+        const cardHTML = `
+            <div class="class-card" 
+                 style="width: 200px; padding: 15px; ${canEnter ? '' : 'opacity: 0.6; cursor: not-allowed; border-color: #555;'}" 
+                 onclick="${canEnter ? `window.teleportToMap('${key}')` : ''}">
+                <div style="font-size: 40px;">${map.icon}</div>
+                <div class="class-title" style="font-size: 18px; color: ${canEnter ? '#00ffff' : '#777'};">${map.name}</div>
+                <div style="font-size: 13px; margin: 5px 0; color: ${canEnter ? '#00ff00' : '#ff3333'};">
+                    ${canEnter ? `Cấp yêu cầu: ${map.minLv}+` : `Khóa: Cần Cấp ${map.minLv}`}
+                </div>
+                <p style="font-size: 11px; color: #aaa; margin: 0;">
+                    ${map.type === 'farm' ? '(Farm Nguyên Liệu)' : `(${map.desc})`}
+                </p>
+            </div>
+        `;
+
+        // Bỏ vào đúng Tab
+        if (map.type === 'farm') farmTab.innerHTML += cardHTML;
+        else eventTab.innerHTML += cardHTML;
     }
+};
 
-    // 1. Trừ nguyên liệu
-    item.req.forEach(req => {
-        const invItem = state.inventory.find(i => i.id === req.id);
-        invItem.count -= req.count;
-    });
-    // Dọn dẹp các nguyên liệu đã hết (count <= 0)
-    state.inventory = state.inventory.filter(i => i.count > 0);
-
-    // 2. Thêm Trang bị mới vào túi đồ (Là 1 object riêng biệt vì trang bị không cộng dồn)
-    state.inventory.push({
-        id: item.id + '_' + Date.now(), // ID duy nhất để không bị gộp chung
-        baseId: item.id,
-        name: item.name,
-        icon: item.icon,
-        type: item.type,
-        stats: item.stats,
-        count: 1,
-        isEquipment: true // Cờ đánh dấu đây là trang bị, không phải nguyên liệu
-    });
-
-    // 3. Render lại
-    window.updateInventoryUI();
-    window.selectCraftItem(state.selectedCraftId); // Cập nhật lại số nguyên liệu hiện tại
-
-    // Hiệu ứng nhẹ
-    const iconEl = document.getElementById('craft-icon');
-    iconEl.style.transform = 'scale(1.5)';
-    setTimeout(() => iconEl.style.transform = 'scale(1)', 200);
+window.closeMapSelection = () => {
+    state.isPaused = false;
+    document.getElementById('map-selection-panel').style.display = 'none';
+    state.lastTime = performance.now();
+    requestAnimationFrame(gameLoop);
 };
 
 // ================= HỆ THỐNG TOOLTIP & TRANG BỊ =================
 
 window.showItemTooltip = (e, itemOrIndex, isEquipped = false) => {
-    // Nếu truyền vào index (số), lấy item từ inventory. Nếu truyền vào object, dùng luôn.
+    // Lấy item từ inventory (nếu truyền số) hoặc dùng luôn object
     const item = (typeof itemOrIndex === 'number') ? state.inventory[itemOrIndex] : itemOrIndex;
     if (!item) return;
 
     const tt = document.getElementById('item-tooltip');
+
+    // Đổi màu tên món đồ theo phẩm chất, mặc định là vàng cam
     document.getElementById('tt-name').innerText = item.name;
+    document.getElementById('tt-name').style.color = item.color || '#ffaa00';
 
     const typeVN = { 'helmet': 'Nón', 'armor': 'Áo giáp', 'gloves': 'Bao tay', 'boots': 'Giày', 'ring': 'Nhẫn', 'necklace': 'Dây chuyền', 'ring1': 'Nhẫn', 'ring2': 'Nhẫn' };
     document.getElementById('tt-type').innerText = 'Loại: ' + (typeVN[item.type] || item.type || 'Vật phẩm');
 
     let desc = '';
-    if (item.stats) {
-        if (item.stats.maxHp) desc += `<span style="color: #ff5555;">Máu tối đa: +${item.stats.maxHp}</span><br>`;
-        if (item.stats.attack) desc += `<span style="color: #ffff55;">Sát thương: +${item.stats.attack}</span><br>`;
-        if (item.stats.speed) desc += `<span style="color: #55ff55;">Tốc độ: +${item.stats.speed}</span><br>`;
+    if (item.isEquipment) {
+        // Lọc lấy đúng ID gốc để lấy chỉ số cơ bản (vì ID lúc rèn có nối thêm thời gian)
+        let baseStats = item.stats;
+        if (item.id) {
+            const idParts = item.id.split('_');
+            if (idParts.length >= 2) {
+                const baseId = idParts[0] + '_' + idParts[1];
+                // Lấy chỉ số cơ bản từ sổ tay chế tạo để không bị trộn lẫn với dòng phụ
+                if (CRAFT_RECIPES[baseId]) {
+                    baseStats = CRAFT_RECIPES[baseId].stats;
+                }
+            }
+        }
+
+        // Vẽ Thuộc tính cơ bản
+        desc += `<div style="color: #00ffff; font-size: 13px; margin-bottom: 5px;">--- Thuộc tính cơ bản ---</div>`;
+        if (baseStats.maxHp) desc += `❤️ HP: +${baseStats.maxHp}<br>`;
+        if (baseStats.attack) desc += `⚔️ Công: +${baseStats.attack}<br>`;
+        if (baseStats.speed) desc += `👟 Tốc: +${baseStats.speed}<br>`;
+
+        // Vẽ Option ngẫu nhiên (nếu có)
+        if (item.subOptions && item.subOptions.length > 0) {
+            desc += `<div style="color: ${item.color || '#ffaa00'}; font-size: 13px; margin-top: 8px; margin-bottom: 5px;">--- Dòng phụ (Tẩy luyện) ---</div>`;
+            item.subOptions.forEach(opt => {
+                let suffix = opt.type === 'crit' ? '%' : '';
+                desc += `<span style="color: #ffaa00;">✦ ${opt.name}: +${opt.val}${suffix}</span><br>`;
+            });
+        }
     } else {
+        // Giao diện cho vật phẩm không phải trang bị (nguyên liệu)
         desc = '<span style="color: #ccc;">Nguyên liệu dùng để chế tạo.</span>';
     }
+
     document.getElementById('tt-desc').innerHTML = desc;
 
     const actionEl = document.getElementById('tt-action');
@@ -882,6 +1253,13 @@ window.applyEquipmentStats = (item, isEquipping) => {
     }
     if (item.stats.attack) state.player.attack += item.stats.attack * sign;
     if (item.stats.speed) state.player.speed += item.stats.speed * sign;
+    
+    // THÊM LOGIC CỘNG/TRỪ CHỈ SỐ BẠO KÍCH (CRIT) TẠI ĐÂY
+    if (item.stats.crit) {
+        // Đảm bảo nhân vật có sẵn gốc crit = 0 nếu chưa được khởi tạo
+        if (state.player.crit === undefined) state.player.crit = 0; 
+        state.player.crit += item.stats.crit * sign;
+    }
 };
 
 // Hàm MẶC trang bị
@@ -953,7 +1331,15 @@ window.updateEquipmentUI = () => {
             el.classList.remove('locked');
             el.style.cursor = 'pointer';
 
-            // Gắn Tooltip cho đồ đang mặc
+            // Vẽ viền màu và hiệu ứng Shadow theo Rarity
+            const borderColor = item.color || '#ffaa00';
+            el.style.border = `2px solid ${borderColor}`;
+            if (item.rarity === 'epic' || item.rarity === 'rare') {
+                el.style.boxShadow = `0 0 10px ${borderColor} inset, 0 0 5px ${borderColor}`;
+            } else {
+                el.style.boxShadow = 'none';
+            }
+
             el.onmouseenter = (e) => window.showItemTooltip(e, item, true);
             el.onmouseleave = () => window.hideItemTooltip();
             el.onmousemove = (e) => window.moveItemTooltip(e);
@@ -961,6 +1347,8 @@ window.updateEquipmentUI = () => {
         } else {
             el.innerHTML = '';
             el.style.cursor = 'default';
+            el.style.border = '1px solid #444'; // Trả về viền mặc định khi tháo đồ
+            el.style.boxShadow = 'none';
             el.onmouseenter = null;
             el.onclick = null;
         }
@@ -972,11 +1360,20 @@ window.updateEquipmentUI = () => {
     const atkEl = document.getElementById('eq-stat-atk');
     const spdEl = document.getElementById('eq-stat-spd');
     const aspdEl = document.getElementById('eq-stat-aspd');
+    const critEl = document.getElementById('eq-stat-crit');
 
-    if (hpEl) hpEl.innerText = p.maxHp;
-    if (atkEl) atkEl.innerText = p.attack.toFixed(1);
-    if (spdEl) spdEl.innerText = p.speed;
+    if (hpEl) hpEl.innerText = Math.floor(p.maxHp).toLocaleString();
+    if (atkEl) atkEl.innerText = Math.floor(p.attack).toLocaleString();
+    if (spdEl) spdEl.innerText = Math.floor(p.speed).toLocaleString();
     if (aspdEl) aspdEl.innerText = p.attackSpeed.toFixed(2) + "x";
+
+    // Thuộc tính bạo kích (Crit)
+    if (critEl) {
+        const critVal = p.crit || 0; // Nếu Base chưa có Crit thì mặc định là 0
+        critEl.innerText = critVal + "%";
+        // Nếu crit > 0 thì đổi màu cho ngầu
+        critEl.style.color = critVal > 0 ? '#ffaa00' : '#888';
+    }
 };
 
 window.teleportTo = (loc) => {
@@ -986,16 +1383,6 @@ window.teleportTo = (loc) => {
         state.currentMap = 'dungeon'; window.changeScene('scene-dungeon');
         document.getElementById('global-player-hud').style.display = 'block'; document.getElementById('skill-panel').style.display = 'flex'; document.getElementById('score-board').style.display = 'flex';
         state.playTime = 0; state.enemies = []; state.boss = null; state.projectiles = []; state.vfxs = []; state.xpOrbs = [];
-    } else if (loc === 'forest') {
-        state.currentMap = 'forest'; window.changeScene('scene-forest');
-        document.getElementById('global-player-hud').style.display = 'block';
-        document.getElementById('skill-panel').style.display = 'flex';
-        document.getElementById('score-board').style.display = 'flex';
-        initForestMap();
-
-        // spawn in the portal
-        state.player.x = 0;
-        state.player.y = 80;
     }
     ui.updateHp(state.player.hp, state.player.maxHp); ui.updateLevel(state.player.level); ui.updateStats(state.player.attack, state.player.speed);
     ui.updateXp(state.player.exp, state.player.nextLevelExp);
@@ -1023,6 +1410,7 @@ window.saveGame = () => {
             attack: state.player.attack,
             speed: state.player.speed,
             attackSpeed: state.player.attackSpeed,
+            crit: state.player.crit || 0,
             equipment: state.player.equipment
         },
         kills: state.kills,
@@ -1042,8 +1430,23 @@ window.loadGame = (slotId) => {
     state.currentMap = data.currentMap;
     state.kills = data.kills;
     state.player = { ...state.player, ...data.player };
+    
+    // Sửa lỗi cho các file Save cũ không có Crit
+    if (state.player.crit === undefined) state.player.crit = 0;
 
     state.inventory = data.inventory || [];
+    
+    // Tính toán lại toàn bộ chỉ số từ trang bị (Bao gồm cả Crit)
+    let totalCrit = 0;
+    for (let slot in state.player.equipment) {
+        let item = state.player.equipment[slot];
+        if (item && item.stats && item.stats.crit) {
+            totalCrit += item.stats.crit;
+        }
+    }
+    // Ghi đè lại Crit từ đồ để tránh lỗi mất stat 
+    state.player.crit = totalCrit;
+
     window.updateInventoryUI();
     window.updateEquipmentUI();
 
@@ -1078,3 +1481,61 @@ window.startNewGame = (slotId) => {
 };
 
 window.changeScene('scene-main-menu');
+
+
+
+
+// ================= HỆ THỐNG CHEAT TOOL =================
+
+window.openCheatMenu = () => {
+    state.isPaused = true;
+    document.getElementById('cheat-panel').style.display = 'flex';
+    document.getElementById('cheat-player-lv').innerText = `Cấp hiện tại: ${state.player.level}`;
+
+    // Đổ danh sách nguyên liệu từ GameData vào bảng cheat
+    const container = document.getElementById('cheat-items-list');
+    container.innerHTML = '';
+
+    // Duyệt qua tất cả vật phẩm có trong ITEMS (GameData)
+    for (let key in ITEMS) {
+        const itm = ITEMS[key];
+        const btn = document.createElement('button');
+        btn.className = 'btn';
+        btn.style = "font-size: 12px; padding: 5px; min-width: 100px; border-color: #555;";
+        btn.innerHTML = `${itm.icon} ${itm.name}`;
+        btn.onclick = () => {
+            // Thêm 50 cái mỗi lần bấm
+            for (let i = 0; i < 50; i++) addItemToInventory(itm);
+            // Hiệu ứng chữ nổi báo thành công
+            state.vfxs.push({ type: 'text', el: ui.createDmgText("CHEAT +50", "#ff00ff", document.getElementById('damage-container')), x: state.player.x, y: state.player.y, vy: -60, life: 1.0 });
+        };
+        container.appendChild(btn);
+    }
+};
+
+window.closeCheatMenu = () => {
+    state.isPaused = false;
+    document.getElementById('cheat-panel').style.display = 'none';
+    state.lastTime = performance.now();
+    requestAnimationFrame(gameLoop);
+};
+
+// Hàm tăng cấp nhanh để test map
+window.cheatAddLv = (amount) => {
+    state.player.level += amount;
+    state.player.exp = 0;
+    // Cập nhật lại chỉ số theo level mới (nếu có logic scale)
+    ui.updateLevel(state.player.level);
+    document.getElementById('cheat-player-lv').innerText = `Cấp hiện tại: ${state.player.level}`;
+};
+
+// Gán phím tắt F2 để mở bảng Cheat
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'F2') {
+        if (document.getElementById('cheat-panel').style.display === 'none') {
+            window.openCheatMenu();
+        } else {
+            window.closeCheatMenu();
+        }
+    }
+});

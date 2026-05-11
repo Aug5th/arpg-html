@@ -9,19 +9,6 @@ export const ENEMY_STATS = {
     names: ["Huyết Bức", "Ma Lang", "Cốt Tướng", "Oán Hồn", "Độc Chu", "Hắc Hổ", "Quỷ Mị"]
 };
 
-// Map FOREST
-export const ITEMS = {
-    HERB: { id: 'herb', name: 'Linh Thảo', icon: '🌿', stackable: true },
-    COPPER: { id: 'copper', name: 'Đồng Khoáng', icon: '🧱', stackable: true }
-};
-
-export const FOREST_ENEMIES = {
-    BOAR: { name: 'Heo Rừng', hp: 50, speed: 80, damage: 8, icon: '🐗', xp: 20 },
-    WOLF: { name: 'Sói Xám', hp: 40, speed: 120, damage: 12, icon: '🐺', xp: 25 }
-};
-
-// End Map FOREST
-
 // --- PHẦN MỚI: CẤU HÌNH BOSS ---
 export const BOSS_CONFIG = {
     // Điều kiện xuất hiện
@@ -75,7 +62,7 @@ export const WEAPONS = {
 export const LEVEL_CONFIG = {
     baseExp: 100,           // Kinh nghiệm cần để lên Level 2
     expGrowth: 1.5,         // Hệ số tăng trưởng XP mỗi cấp
-    
+
     // Chỉ số cộng thêm mỗi khi Level Up
     bonuses: {
         maxHp: 20,
@@ -96,4 +83,94 @@ export const XP_ORB_CONFIG = {
 export const INVENTORY_CONFIG = {
     slots: 25, // 5x5
     columns: 5
+};
+
+// MAP CONFIGS
+
+// --- DANH SÁCH VẬT PHẨM ---
+export const ITEMS = {
+    // Rừng Rậm (1-10)
+    HERB: { id: 'herb', name: 'Linh Thảo', icon: '🌿', type: 'material', stackable: true },
+    COPPER: { id: 'copper', name: 'Đồng Khoáng', icon: '🧱', type: 'material', stackable: true },
+    BOAR_TUSK: { id: 'boar_tusk', name: 'Nanh Heo Rừng', icon: '🦴', type: 'material', stackable: true },
+    WOLF_PELT: { id: 'wolf_pelt', name: 'Da Sói', icon: '🟫', type: 'material', stackable: true },
+
+    // Sa Mạc (20-30)
+    CACTUS: { id: 'cactus', name: 'Xương Rồng', icon: '🌵', type: 'material', stackable: true },
+    IRON: { id: 'iron', name: 'Thiết Khoáng', icon: '🪨', type: 'material', stackable: true },
+    SCORPION_TAIL: { id: 'scorpion_tail', name: 'Đuôi Bọ Cạp', icon: '🦂', type: 'material', stackable: true },
+    SNAKE_VENOM: { id: 'snake_venom', name: 'Nọc Rắn', icon: '🐍', type: 'material', stackable: true },
+
+    // Băng Tuyết (30-40)
+    SNOW_LOTUS: { id: 'snow_lotus', name: 'Tuyết Liên', icon: '❄️', type: 'material', stackable: true },
+    ICE_CRYSTAL: { id: 'ice_crystal', name: 'Băng Tinh', icon: '💎', type: 'material', stackable: true },
+    YETI_FUR: { id: 'yeti_fur', name: 'Lông Dã Nhân', icon: '🧥', type: 'material', stackable: true },
+    ICE_BEAR_CLAW: { id: 'ice_bear_claw', name: 'Móng Gấu', icon: '🐾', type: 'material', stackable: true },
+
+    // Biển Sâu (40-50)
+    SEAWEED: { id: 'seaweed', name: 'Hải Tảo', icon: '🥬', type: 'material', stackable: true },
+    PEARL: { id: 'pearl', name: 'Trân Châu', icon: '🦪', type: 'material', stackable: true },
+    SHARK_FIN: { id: 'shark_fin', name: 'Vây Cá Mập', icon: '🦈', type: 'material', stackable: true },
+    CRAB_SHELL: { id: 'crab_shell', name: 'Mai Cua', icon: '🦀', type: 'material', stackable: true },
+
+    // Núi Lửa (50-60)
+    FIRE_FLOWER: { id: 'fire_flower', name: 'Hỏa Diệm Hoa', icon: '🔥', type: 'material', stackable: true },
+    OBSIDIAN: { id: 'obsidian', name: 'Hắc Diện Thạch', icon: '🖤', type: 'material', stackable: true },
+    DRAGON_SCALE: { id: 'dragon_scale', name: 'Vảy Rồng', icon: '🐉', type: 'material', stackable: true },
+    DEMON_HORN: { id: 'demon_horn', name: 'Sừng Ác Quỷ', icon: '😈', type: 'material', stackable: true }
+};
+
+// --- CẤU HÌNH CÁC MAP & QUÁI VẬT ---
+export const MAP_CONFIG = {
+    forest: {
+        id: 'forest', name: 'Thanh Diệp Lâm', minLv: 1, maxLv: 10, type: 'farm',
+        bgColor: '#061a0a', obstacle: '🌲', icon: '🌳',
+        herb: { item: ITEMS.HERB }, ore: { item: ITEMS.COPPER },
+        enemies: [
+            { name: 'Heo Rừng', hp: 50, speed: 80, damage: 8, icon: '🐗', xp: 20, drop: ITEMS.BOAR_TUSK, dropRate: 0.3 },
+            { name: 'Sói Xám', hp: 40, speed: 120, damage: 12, icon: '🐺', xp: 25, drop: ITEMS.WOLF_PELT, dropRate: 0.3 }
+        ]
+    },
+    desert: {
+        id: 'desert', name: 'Huyễn Sa Mạc', minLv: 20, maxLv: 30, type: 'farm',
+        bgColor: '#2b1d06', obstacle: '🌴', icon: '🏜️',
+        herb: { item: ITEMS.CACTUS }, ore: { item: ITEMS.IRON },
+        enemies: [
+            { name: 'Bọ Cạp', hp: 200, speed: 90, damage: 30, icon: '🦂', xp: 80, drop: ITEMS.SCORPION_TAIL, dropRate: 0.4 },
+            { name: 'Rắn Độc', hp: 150, speed: 140, damage: 45, icon: '🐍', xp: 100, drop: ITEMS.SNAKE_VENOM, dropRate: 0.4 }
+        ]
+    },
+    ice: {
+        id: 'ice', name: 'Cực Hàn Băng Ngục', minLv: 30, maxLv: 40, type: 'farm',
+        bgColor: '#0b1626', obstacle: '🏔️', icon: '❄️',
+        herb: { item: ITEMS.SNOW_LOTUS }, ore: { item: ITEMS.ICE_CRYSTAL },
+        enemies: [
+            { name: 'Dã Nhân', hp: 500, speed: 100, damage: 80, icon: '🦍', xp: 200, drop: ITEMS.YETI_FUR, dropRate: 0.4 },
+            { name: 'Gấu Tuyết', hp: 800, speed: 70, damage: 120, icon: '🐻‍❄️', xp: 250, drop: ITEMS.ICE_BEAR_CLAW, dropRate: 0.5 }
+        ]
+    },
+    ocean: {
+        id: 'ocean', name: 'Thâm Đáy Hải Vực', minLv: 40, maxLv: 50, type: 'farm',
+        bgColor: '#001122', obstacle: '🪸', icon: '🌊',
+        herb: { item: ITEMS.SEAWEED }, ore: { item: ITEMS.PEARL },
+        enemies: [
+            { name: 'Cá Mập', hp: 1200, speed: 150, damage: 200, icon: '🦈', xp: 500, drop: ITEMS.SHARK_FIN, dropRate: 0.4 },
+            { name: 'Cua Đá', hp: 1500, speed: 80, damage: 250, icon: '🦀', xp: 600, drop: ITEMS.CRAB_SHELL, dropRate: 0.5 }
+        ]
+    },
+    volcano: {
+        id: 'volcano', name: 'Luyện Ngục Diệm Sơn', minLv: 50, maxLv: 60, type: 'farm',
+        bgColor: '#2a0000', obstacle: '🌋', icon: '🌋',
+        herb: { item: ITEMS.FIRE_FLOWER }, ore: { item: ITEMS.OBSIDIAN },
+        enemies: [
+            { name: 'Hỏa Long', hp: 3000, speed: 130, damage: 500, icon: '🐉', xp: 1200, drop: ITEMS.DRAGON_SCALE, dropRate: 0.5 },
+            { name: 'Ác Quỷ', hp: 2000, speed: 180, damage: 400, icon: '👿', xp: 1000, drop: ITEMS.DEMON_HORN, dropRate: 0.4 }
+        ]
+    },
+
+    // --- TAB SỰ KIỆN (EVENT) ---
+    dungeon: {
+        id: 'dungeon', name: 'Ma Tôn Vực', minLv: 1, maxLv: 99, type: 'event',
+        icon: '👹', desc: 'Boss Thế Giới'
+    }
 };
