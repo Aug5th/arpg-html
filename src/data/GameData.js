@@ -117,13 +117,22 @@ export const ITEMS = {
     FIRE_FLOWER: { id: 'fire_flower', name: 'Hỏa Diệm Hoa', icon: '🔥', type: 'material', stackable: true },
     OBSIDIAN: { id: 'obsidian', name: 'Hắc Diện Thạch', icon: '🖤', type: 'material', stackable: true },
     DRAGON_SCALE: { id: 'dragon_scale', name: 'Vảy Rồng', icon: '🐉', type: 'material', stackable: true },
-    DEMON_HORN: { id: 'demon_horn', name: 'Sừng Ác Quỷ', icon: '😈', type: 'material', stackable: true }
+    DEMON_HORN: { id: 'demon_horn', name: 'Sừng Ác Quỷ', icon: '😈', type: 'material', stackable: true },
+
+    // BOSSES
+    // --- LÕI YÊU ĐAN (BOSS DROPS) ---
+    BOAR_KING_CORE: { id: 'boar_king_core', name: 'Yêu Đan Huyết Trư', icon: '🔴', type: 'material', desc: 'Lõi sức mạnh của Huyết Trư Yêu Vương.' },
+    SCORPION_KING_CORE: { id: 'scorpion_king_core', name: 'Yêu Đan Ma Yết', icon: '🟠', type: 'material', desc: 'Lõi sức mạnh của Tử Sa Ma Yết.' },
+    FROST_APE_CORE: { id: 'frost_ape_core', name: 'Yêu Đan Cự Viên', icon: '🔵', type: 'material', desc: 'Lõi sức mạnh của Băng Sương Cự Viên.' },
+    FLOOD_DRAGON_CORE: { id: 'flood_dragon_core', name: 'Yêu Đan Giao Long', icon: '🟣', type: 'material', desc: 'Lõi sức mạnh của Độc Giác Giao Long.' },
+    DEMON_LORD_CORE: { id: 'demon_lord_core', name: 'Ma Tôn Bản Nguyên', icon: '❤️‍🔥', type: 'material', desc: 'Bản nguyên chi lực của Luyện Ngục Ma Tôn.' }
+    
 };
 
 // --- CẤU HÌNH CÁC MAP & QUÁI VẬT ---
 export const MAP_CONFIG = {
     forest: {
-        id: 'forest', name: 'Thanh Diệp Lâm', minLv: 1, maxLv: 10, type: 'farm',
+        id: 'forest', name: 'Thanh Diệp Lâm', minLv: 1, type: 'farm',
         bgColor: '#061a0a', obstacle: '🌲', icon: '🌳',
         herb: { item: ITEMS.HERB }, ore: { item: ITEMS.COPPER },
         enemies: [
@@ -132,7 +141,7 @@ export const MAP_CONFIG = {
         ]
     },
     desert: {
-        id: 'desert', name: 'Huyễn Sa Mạc', minLv: 20, maxLv: 30, type: 'farm',
+        id: 'desert', name: 'Huyễn Sa Mạc', minLv: 10, type: 'farm',
         bgColor: '#2b1d06', obstacle: '🌴', icon: '🏜️',
         herb: { item: ITEMS.CACTUS }, ore: { item: ITEMS.IRON },
         enemies: [
@@ -141,7 +150,7 @@ export const MAP_CONFIG = {
         ]
     },
     ice: {
-        id: 'ice', name: 'Cực Hàn Băng Ngục', minLv: 30, maxLv: 40, type: 'farm',
+        id: 'ice', name: 'Cực Hàn Băng Ngục', minLv: 20, type: 'farm',
         bgColor: '#0b1626', obstacle: '🏔️', icon: '❄️',
         herb: { item: ITEMS.SNOW_LOTUS }, ore: { item: ITEMS.ICE_CRYSTAL },
         enemies: [
@@ -150,7 +159,7 @@ export const MAP_CONFIG = {
         ]
     },
     ocean: {
-        id: 'ocean', name: 'Thâm Đáy Hải Vực', minLv: 40, maxLv: 50, type: 'farm',
+        id: 'ocean', name: 'Thâm Đáy Hải Vực', minLv: 30, type: 'farm',
         bgColor: '#001122', obstacle: '🪸', icon: '🌊',
         herb: { item: ITEMS.SEAWEED }, ore: { item: ITEMS.PEARL },
         enemies: [
@@ -159,7 +168,7 @@ export const MAP_CONFIG = {
         ]
     },
     volcano: {
-        id: 'volcano', name: 'Luyện Ngục Diệm Sơn', minLv: 50, maxLv: 60, type: 'farm',
+        id: 'volcano', name: 'Luyện Ngục Diệm Sơn', minLv: 40, type: 'farm',
         bgColor: '#2a0000', obstacle: '🌋', icon: '🌋',
         herb: { item: ITEMS.FIRE_FLOWER }, ore: { item: ITEMS.OBSIDIAN },
         enemies: [
