@@ -56,6 +56,13 @@ const state = {
     inventory: [], isMining: false, miningTimer: 0, miningTarget: null,
 
     mapEnv: { herbs: [], ores: [], trees: [], portal: { x: 0, y: 0 }, decorations: [] },
+
+    mapTimer: 0,
+    portalSpawned: false,
+    portalPos: { x: 0, y: 0 },
+    canEnterPortal: false,
+    isInBossMap: false,
+    bossLockTimeLeft: 0
 };
 
 
@@ -228,6 +235,11 @@ input.onKeyDownAction = (k) => {
             if (state.isMining) { state.isMining = false; return; }
 
             const mapConfig = MAP_CONFIG[state.currentMap];
+
+            if (state.canEnterPortal && !state.isInBossMap) {
+                window.enterBossMap();
+                return;
+            }
 
             const herb = state.mapEnv.herbs.find(h => Math.hypot(state.player.x - h.x, state.player.y - h.y) < 60);
             if (herb) {
@@ -402,6 +414,22 @@ function applyDamage(entity, baseDmg) {
     // 4. LOGIC QUÁI CHẾT & RỚT ĐỒ (Giữ nguyên)
     if (entity.hp <= 0) {
         if (entity === state.boss) {
+            // VÒNG LẶP RỚT ĐỒ THEO CONFIG CỦA BOSS THƯỜNG
+            if (entity.drops) {
+                entity.drops.forEach(drop => {
+                    if (Math.random() <= drop.rate) {
+                        const itemData = Object.values(ITEMS).find(i => i.id === drop.id);
+                        if (itemData) {
+                            for (let i = 0; i < drop.count; i++) addItemToInventory(itemData);
+                            // Rớt chữ tím cực xịn
+                            const dropEl = ui.createDmgText(`+${drop.count} ${itemData.name}`, "#ff33ff", document.getElementById('damage-container'));
+                            state.vfxs.push({ type: 'text', el: dropEl, x: entity.x + (Math.random() - 0.5) * 100, y: entity.y + (Math.random() - 0.5) * 100, vy: -50, life: 3.0 });
+                        }
+                    }
+                });
+                state.player.exp += entity.xp || 0; checkLevelUp(); // Cộng EXP từ boss
+            }
+
             state.boss = null;
             state.isVictory = true;
             ui.toggleScreen('victory-screen', true);
@@ -412,7 +440,8 @@ function applyDamage(entity, baseDmg) {
 
             // --- THÊM LOGIC RỚT LINH THẠCH ---
             // Số lượng ngẫu nhiên dựa vào Max HP của quái (Quái càng trâu, rớt càng nhiều)
-            const gemDrop = Math.floor(Math.random() * (entity.maxHp / 5)) + 5;
+            const safeMaxHp = entity.maxHp || entity.hp || 10;
+            const gemDrop = Math.floor(Math.random() * (safeMaxHp / 5)) + 5;
             state.player.gem += gemDrop;
 
             // Hiệu ứng chữ Linh Thạch bay lên (Màu xanh dương Cyan)
@@ -449,6 +478,7 @@ function applyDamage(entity, baseDmg) {
         } else if (state.mountains.includes(entity)) {
             state.mountains = state.mountains.filter(m => m !== entity);
         }
+
     }
 }
 
@@ -658,9 +688,20 @@ window.clearMapState = () => {
     state.lastSpawn = 0;
     state.playTime = 0;
 
+    state.mapTimer = 0;
+    state.portalSpawned = false;
+    state.canEnterPortal = false;
+    state.isInBossMap = false;
+    state.bossLockTimeLeft = 0;
+
     // 4. Reset máu của quái vật map rừng (nếu có)
     state.mapEnv.herbs = [];
     state.mapEnv.ores = [];
+
+    const tutorialEl = document.getElementById('boss-goal-tutorial');
+    if (tutorialEl) tutorialEl.style.display = 'none';
+    const bossPortalEl = document.getElementById('boss-portal-el');
+    if (bossPortalEl) bossPortalEl.style.display = 'none';
 };
 
 // --- GAME LOOP ---
@@ -738,11 +779,12 @@ function update(dt) {
 
         const distPortal = Math.hypot(p.x - state.mapEnv.portal.x, p.y - state.mapEnv.portal.y);
 
-        if (state.isMining) {
+        if (state.canEnterPortal) {
+            promptEl.innerText = "BẤM [E] ĐỂ VÀO ĐỘNG PHỦ YÊU VƯƠNG"; canInteract = true;
+        } else if (state.isMining) {
             promptEl.innerText = "BẤM [E] ĐỂ HỦY ĐÀO"; canInteract = true;
             state.miningTimer -= dt;
             if (state.miningTimer <= 0) {
-                // Nhận đúng loại khoáng của map hiện tại
                 addItemToInventory(mapConfig.ore.item);
                 state.mapEnv.ores = state.mapEnv.ores.filter(o => o !== state.miningTarget);
                 state.isMining = false;
@@ -759,25 +801,127 @@ function update(dt) {
         }
         promptEl.style.display = canInteract ? 'block' : 'none';
 
-        state.lastSpawn += dt;
-        if (state.lastSpawn > 3.0) { spawnMapEnemy(); state.lastSpawn = 0; }
     }
 
-    // ----- LOGIC MAP MA TÔN VỰC (DUNGEON) -----
-    if (state.currentMap === 'dungeon') {
+    // ========================================================
+    // LOGIC ĐỒNG HỒ, XUẤT HIỆN CỔNG BOSS & MA TÔN VỰC
+    // ========================================================
+    if (state.currentMap !== 'village') {
         state.playTime += dt;
         const tutorialEl = document.getElementById('boss-goal-tutorial');
-        if (!state.boss) {
-            const timeLeft = Math.max(0, DUNGEON_BOSS_CONFIG.spawnTime - state.playTime);
-            const minutes = Math.floor(timeLeft / 60); const seconds = Math.floor(timeLeft % 60).toString().padStart(2, '0');
-            tutorialEl.innerText = `Ma Tôn giá lâm sau: ${minutes}:${seconds}`; tutorialEl.style.color = '#ffaa00';
-            if (state.playTime >= DUNGEON_BOSS_CONFIG.spawnTime) spawnBoss();
+        if (state.currentMap !== 'village') {
+            tutorialEl.style.display = 'block';
+            state.mapTimer += dt;
+
+            if (state.isInBossMap) {
+                // 1. ĐANG Ở TRONG PHÓ BẢN YÊU VƯƠNG (LOCK TIME)
+                state.bossLockTimeLeft -= dt;
+                if (state.bossLockTimeLeft <= 0) {
+                    state.bossLockTimeLeft = 0;
+                    alert("⏳ HẾT GIỜ! Yêu Vương quá mạnh, bạn bị đánh văng về làng!");
+                    window.exitToVillage();
+                    return;
+                }
+                const m = Math.floor(state.bossLockTimeLeft / 60);
+                const s = Math.floor(state.bossLockTimeLeft % 60).toString().padStart(2, '0');
+                tutorialEl.innerText = `⚠️ THỜI GIAN SINH TỬ: ${m}:${s}`;
+                tutorialEl.style.color = '#ff3333';
+
+            } else if (state.currentMap === 'dungeon') {
+                // 2. MAP SỰ KIỆN: MA TÔN VỰC (Dungeon Cũ)
+                if (!state.boss) {
+                    const timeLeft = Math.max(0, DUNGEON_BOSS_CONFIG.spawnTime - state.mapTimer);
+                    const m = Math.floor(timeLeft / 60);
+                    const s = Math.floor(timeLeft % 60).toString().padStart(2, '0');
+                    tutorialEl.innerText = `Ma Tôn giá lâm sau: ${m}:${s}`;
+                    tutorialEl.style.color = '#ffaa00';
+                    if (state.mapTimer >= DUNGEON_BOSS_CONFIG.spawnTime) spawnBoss();
+                } else {
+                    tutorialEl.innerText = `⚠️ TIÊU DIỆT MA TÔN! ⚠️`;
+                    tutorialEl.style.color = '#ff3333';
+                }
+            } else {
+                // 3. MAP FARM: ĐẾM GIỜ MỞ CỔNG YÊU VƯƠNG
+                const mapConfig = MAP_CONFIG[state.currentMap];
+                if (mapConfig && mapConfig.portalSpawnTime) {
+                    if (!state.portalSpawned) {
+                        const timeLeft = Math.max(0, mapConfig.portalSpawnTime - state.mapTimer);
+                        if (timeLeft <= 0) {
+                            state.portalSpawned = true;
+
+                            // Tính toán vị trí ngẫu nhiên cách người chơi một khoảng
+                            let targetX = state.player.x + (Math.random() > 0.5 ? 1 : -1) * (300 + Math.random() * 500);
+                            let targetY = state.player.y + (Math.random() > 0.5 ? 1 : -1) * (300 + Math.random() * 500);
+
+                            // GIỚI HẠN (CLAMP): Map rộng 1600, chặn ở mức 1450 để cổng không lọt ra ngoài hàng rào
+                            const PORTAL_LIMIT = 1450;
+                            state.portalPos = {
+                                x: Math.max(-PORTAL_LIMIT, Math.min(PORTAL_LIMIT, targetX)),
+                                y: Math.max(-PORTAL_LIMIT, Math.min(PORTAL_LIMIT, targetY))
+                            };
+                        } else {
+                            const m = Math.floor(timeLeft / 60);
+                            const s = Math.floor(timeLeft % 60).toString().padStart(2, '0');
+                            tutorialEl.innerText = `Cánh cửa dẫn đến yêu vương sẽ xuất hiện sau: ${m}:${s}`;
+                            tutorialEl.style.color = '#ffaa00';
+                        }
+                    } else {
+                        tutorialEl.innerText = `CÁNH CỬA ĐÃ XUẤT HIỆN! TÌM KIẾM 🌀`;
+                        tutorialEl.style.color = '#ff33ff';
+                    }
+                }
+            }
         } else {
-            tutorialEl.innerText = `⚠️ TIÊU DIỆT MA TÔN! ⚠️`; tutorialEl.style.color = '#ff3333';
+            tutorialEl.style.display = 'none';
         }
 
+        // 4. HIỂN THỊ CÁNH CỬA PORTAL (Bằng HTML DOM để sáng đẹp, không cần đụng Renderer.js)
+        let bossPortalEl = document.getElementById('boss-portal-el');
+        if (state.portalSpawned && !state.isInBossMap && state.currentMap !== 'village') {
+            if (!bossPortalEl) {
+                bossPortalEl = document.createElement('div');
+                bossPortalEl.id = 'boss-portal-el';
+                bossPortalEl.style.position = 'absolute';
+                bossPortalEl.style.fontSize = '60px';
+                bossPortalEl.style.textShadow = '0 0 20px #ff33ff'; // Tỏa sáng màu tím cực mạnh
+                bossPortalEl.style.zIndex = '5';
+                bossPortalEl.innerText = '🌀';
+                document.body.appendChild(bossPortalEl);
+            }
+            bossPortalEl.style.display = 'block';
+            // Tính toán vị trí Render chuẩn xác so với Camera
+            bossPortalEl.style.left = (state.portalPos.x - state.camX - 30) + 'px';
+            bossPortalEl.style.top = (state.portalPos.y - state.camY - 30) + 'px';
+
+            // Tính toán khoảng cách để hiện nút [E]
+            const dist = Math.hypot(p.x - state.portalPos.x, p.y - state.portalPos.y);
+            state.canEnterPortal = dist < 80;
+        } else if (bossPortalEl) {
+            bossPortalEl.style.display = 'none';
+            state.canEnterPortal = false;
+        }
+
+        // ========================================================
+        // LOGIC SPAWN QUÁI (ĐÃ GỘP CHUNG)
+        // ========================================================
         state.lastSpawn += dt;
-        if (!state.boss && state.lastSpawn > ENEMY_STATS.spawnRate) { spawnDungeonEnemy(); state.lastSpawn = 0; }
+        if (!state.isInBossMap && !state.boss) { // Không đẻ quái thường khi đang đánh Boss
+            const farmMaps = ['forest', 'desert', 'ice', 'ocean', 'volcano'];
+
+            if (farmMaps.includes(state.currentMap)) {
+                // Map Farm: 3 giây đẻ 1 con
+                if (state.lastSpawn > 3.0) {
+                    spawnMapEnemy();
+                    state.lastSpawn = 0;
+                }
+            } else if (state.currentMap === 'dungeon') {
+                // Map Ma Tôn: Đẻ nhanh theo ENEMY_STATS.spawnRate
+                if (state.lastSpawn > ENEMY_STATS.spawnRate) {
+                    spawnDungeonEnemy();
+                    state.lastSpawn = 0;
+                }
+            }
+        }
 
         if (state.boss) {
             const b = state.boss; document.getElementById('boss-hp-fill').style.width = (b.hp / b.maxHp * 100) + '%'; document.getElementById('boss-hp-text').innerText = Math.ceil(b.hp) + ' / ' + b.maxHp;
@@ -814,6 +958,38 @@ function update(dt) {
             if (e.isTossed > 0) e.isTossed -= dt;
             if (Math.hypot(p.x - e.x, p.y - e.y) < 30 + e.size / 2) takePlayerDamage(e.damage);
         });
+
+        if (state.boss) {
+            const b = state.boss;
+            ui.setElementDisplay('boss-ui', 'flex');
+            document.getElementById('boss-name').innerText = b.name || "MA TÔN";
+            document.getElementById('boss-hp-fill').style.width = (b.hp / b.maxHp * 100) + '%';
+            document.getElementById('boss-hp-text').innerText = Math.ceil(b.hp) + ' / ' + b.maxHp;
+
+            if (b.state === 'idle') {
+                const ang = Math.atan2(p.y - b.y, p.x - b.x); b.x += Math.cos(ang) * b.speed * dt; b.y += Math.sin(ang) * b.speed * dt;
+                if (Math.hypot(p.x - b.x, p.y - b.y) < (b.size / 2 + 20)) takePlayerDamage(b.damage || 20); // Dùng dmg config
+                b.currentCd -= dt;
+                if (b.currentCd <= 0) {
+                    b.skillType = Math.floor(Math.random() * 3); b.state = b.skillType === 2 ? 'firing' : 'casting'; b.timer = b.skillType === 2 ? 3.0 : 1.5; b.targetX = p.x; b.targetY = p.y;
+                    if (b.skillType === 0) state.vfxs.push({ type: 'bossAOE', x: p.x, y: p.y, life: 1.5, maxLife: 1.5, radius: 150 });
+                    else if (b.skillType === 1) { b.pendingMountains = []; for (let i = 0; i < 20; i++) { const rx = p.x + (Math.random() - 0.5) * 1200, ry = p.y + (Math.random() - 0.5) * 1200; state.vfxs.push({ type: 'mountainWarning', x: rx, y: ry, life: 1.5, maxLife: 1.5, radius: 25 }); b.pendingMountains.push({ x: rx, y: ry }); } }
+                }
+            } else if (b.state === 'casting') {
+                b.timer -= dt;
+                if (b.timer <= 0) {
+                    if (b.skillType === 0) { state.vfxs.push({ type: 'circle', color: 'rgba(255,0,0,0.6)', x: b.targetX, y: b.targetY, radius: 150, life: 0.5, maxLife: 0.5 }); if (Math.hypot(p.x - b.targetX, p.y - b.targetY) <= 150) takePlayerDamage(b.damage || 50); }
+                    else if (b.skillType === 1 && b.pendingMountains) { b.pendingMountains.forEach(pos => state.mountains.push({ x: pos.x, y: pos.y, radius: 25, hp: 40, maxHp: 40 })); b.pendingMountains = []; }
+                    b.state = 'idle'; b.currentCd = 4.0;
+                }
+            } else if (b.state === 'firing') {
+                b.timer -= dt; b.fireTick = (b.fireTick || 0) - dt;
+                if (b.fireTick <= 0) { state.projectiles.push({ x: b.x, y: b.y, vx: Math.cos(Math.atan2(p.y - b.y, p.x - b.x)) * 500, vy: Math.sin(Math.atan2(p.y - b.y, p.x - b.x)) * 500, life: 3.0, type: 'bossOrb', dmg: (b.damage / 2) || 20 }); b.fireTick = 0.15; }
+                if (b.timer <= 0) { b.state = 'idle'; b.currentCd = 4.0; }
+            }
+        } else {
+            ui.setElementDisplay('boss-ui', 'none');
+        }
 
         for (let i = state.xpOrbs.length - 1; i >= 0; i--) {
             let orb = state.xpOrbs[i]; const dist = Math.hypot(p.x - orb.x, p.y - orb.y);
@@ -1684,6 +1860,38 @@ window.teleportTo = (loc) => {
     state.isPaused = false; state.lastTime = performance.now(); requestAnimationFrame(gameLoop);
 };
 
+window.enterBossMap = () => {
+    const bossConfigId = `boss_${state.currentMap}`;
+    const bossData = BOSS_CONFIG[bossConfigId];
+
+    if (!bossData) { alert("Thiếu cấu hình Boss!"); return; }
+
+    state.isInBossMap = true;
+    state.portalSpawned = false;
+    state.canEnterPortal = false;
+    state.bossLockTimeLeft = bossData.lockTime;
+
+    // Tẩy trắng map (Xóa quái, đá, kinh nghiệm...)
+    state.enemies = [];
+    state.xpOrbs = [];
+    state.vfxs = [];
+    state.projectiles = [];
+
+    // Đẩy nhân vật ra giữa
+    state.player.x = 0; state.player.y = 0;
+
+    // Spawn Boss cách nhân vật một chút (Tái sử dụng AI của Ma Tôn Vực)
+    state.boss = {
+        ...bossData,
+        x: 0, y: -250,
+        currentHp: bossData.hp, maxHp: bossData.hp,
+        currentCd: 2.0, state: 'idle', timer: 0
+    };
+
+    // Hiệu ứng giật gân
+    alert(`😈 ${bossData.name.toUpperCase()} GIÁ LÂM! BẠN CÓ ${bossData.lockTime} GIÂY SINH TỒN!`);
+};
+
 
 
 // ================= HỆ THỐNG LUYỆN ĐAN =================
@@ -1754,8 +1962,12 @@ window.startAlchemy = (key) => {
         const invItem = state.inventory.find(i => i.id === r.id);
         if (invItem) invItem.count -= r.count;
     });
-    // Dọn dẹp túi đồ nếu count = 0
-    state.inventory = state.inventory.filter(i => !i.isEquipment || i.count > 0);
+    
+    // ==========================================
+    // ĐÃ FIX: Dọn dẹp túi đồ an toàn và chính xác
+    // ==========================================
+    state.inventory = state.inventory.filter(i => i.count !== 0);
+    
     if (!state.inventory) state.inventory = []; // Tránh lỗi
 
     // 2. Kích hoạt Lò
@@ -2120,5 +2332,23 @@ window.addEventListener('keydown', (e) => {
         } else {
             window.closeCheatMenu();
         }
+    }
+});
+
+window.addEventListener('keyup', (e) => {
+    // Ép nhả phím dựa trên phím vật lý, bất chấp Unikey đang bật Telex hay VNI
+    if (e.code === 'KeyW') input.keys['w'] = false;
+    if (e.code === 'KeyS') input.keys['s'] = false;
+    if (e.code === 'KeyA') input.keys['a'] = false;
+    if (e.code === 'KeyD') input.keys['d'] = false;
+});
+
+// Chống kẹt phím khi người chơi lỡ click chuột ra ngoài cửa sổ game hoặc Alt+Tab
+window.addEventListener('blur', () => {
+    if (input.keys) {
+        input.keys['w'] = false;
+        input.keys['s'] = false;
+        input.keys['a'] = false;
+        input.keys['d'] = false;
     }
 });

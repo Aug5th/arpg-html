@@ -192,7 +192,7 @@ export const MAP_CONFIG = {
 // =========================================================
 // HỆ THỐNG BOSS DUNGEON (TIME-ATTACK)
 // =========================================================
-const BOSS_CONFIG = {
+export const BOSS_CONFIG = {
     // 1. Boss Thanh Diệp Lâm (Dành cho cấp 9 đột phá)
     'boss_forest': {
         id: 'boss_forest',
