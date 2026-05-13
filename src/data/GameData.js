@@ -10,7 +10,7 @@ export const ENEMY_STATS = {
 };
 
 // --- PHẦN MỚI: CẤU HÌNH BOSS ---
-export const BOSS_CONFIG = {
+export const DUNGEON_BOSS_CONFIG = {
     // Điều kiện xuất hiện
     spawnKills: 10,      // Đạt 10 mạng
     spawnTime: 120,      // HOẶC sống sót sau 120 giây (2 phút)
@@ -126,7 +126,7 @@ export const ITEMS = {
     FROST_APE_CORE: { id: 'frost_ape_core', name: 'Yêu Đan Cự Viên', icon: '🔵', type: 'material', desc: 'Lõi sức mạnh của Băng Sương Cự Viên.' },
     FLOOD_DRAGON_CORE: { id: 'flood_dragon_core', name: 'Yêu Đan Giao Long', icon: '🟣', type: 'material', desc: 'Lõi sức mạnh của Độc Giác Giao Long.' },
     DEMON_LORD_CORE: { id: 'demon_lord_core', name: 'Ma Tôn Bản Nguyên', icon: '❤️‍🔥', type: 'material', desc: 'Bản nguyên chi lực của Luyện Ngục Ma Tôn.' }
-    
+
 };
 
 // --- CẤU HÌNH CÁC MAP & QUÁI VẬT ---
@@ -134,6 +134,7 @@ export const MAP_CONFIG = {
     forest: {
         id: 'forest', name: 'Thanh Diệp Lâm', minLv: 1, type: 'farm',
         bgColor: '#061a0a', obstacle: '🌲', icon: '🌳',
+        portalSpawnTime: 60, // Phải farm 60 giây (1 phút) cổng mới mở
         herb: { item: ITEMS.HERB }, ore: { item: ITEMS.COPPER },
         enemies: [
             { name: 'Heo Rừng', hp: 50, speed: 80, damage: 8, icon: '🐗', xp: 20, drop: ITEMS.BOAR_TUSK, dropRate: 0.3 },
@@ -143,6 +144,7 @@ export const MAP_CONFIG = {
     desert: {
         id: 'desert', name: 'Huyễn Sa Mạc', minLv: 10, type: 'farm',
         bgColor: '#2b1d06', obstacle: '🌴', icon: '🏜️',
+        portalSpawnTime: 120, // 2 phút
         herb: { item: ITEMS.CACTUS }, ore: { item: ITEMS.IRON },
         enemies: [
             { name: 'Bọ Cạp', hp: 200, speed: 90, damage: 30, icon: '🦂', xp: 80, drop: ITEMS.SCORPION_TAIL, dropRate: 0.4 },
@@ -152,6 +154,7 @@ export const MAP_CONFIG = {
     ice: {
         id: 'ice', name: 'Cực Hàn Băng Ngục', minLv: 20, type: 'farm',
         bgColor: '#0b1626', obstacle: '🏔️', icon: '❄️',
+        portalSpawnTime: 180, // 3 phút
         herb: { item: ITEMS.SNOW_LOTUS }, ore: { item: ITEMS.ICE_CRYSTAL },
         enemies: [
             { name: 'Dã Nhân', hp: 500, speed: 100, damage: 80, icon: '🦍', xp: 200, drop: ITEMS.YETI_FUR, dropRate: 0.4 },
@@ -161,6 +164,7 @@ export const MAP_CONFIG = {
     ocean: {
         id: 'ocean', name: 'Thâm Đáy Hải Vực', minLv: 30, type: 'farm',
         bgColor: '#001122', obstacle: '🪸', icon: '🌊',
+        portalSpawnTime: 240, // 4 phút
         herb: { item: ITEMS.SEAWEED }, ore: { item: ITEMS.PEARL },
         enemies: [
             { name: 'Cá Mập', hp: 1200, speed: 150, damage: 200, icon: '🦈', xp: 500, drop: ITEMS.SHARK_FIN, dropRate: 0.4 },
@@ -170,6 +174,7 @@ export const MAP_CONFIG = {
     volcano: {
         id: 'volcano', name: 'Luyện Ngục Diệm Sơn', minLv: 40, type: 'farm',
         bgColor: '#2a0000', obstacle: '🌋', icon: '🌋',
+        portalSpawnTime: 300, // 5 phút sinh tử
         herb: { item: ITEMS.FIRE_FLOWER }, ore: { item: ITEMS.OBSIDIAN },
         enemies: [
             { name: 'Hỏa Long', hp: 3000, speed: 130, damage: 500, icon: '🐉', xp: 1200, drop: ITEMS.DRAGON_SCALE, dropRate: 0.5 },
@@ -181,5 +186,105 @@ export const MAP_CONFIG = {
     dungeon: {
         id: 'dungeon', name: 'Ma Tôn Vực', minLv: 1, maxLv: 99, type: 'event',
         icon: '👹', desc: 'Boss Thế Giới'
+    }
+};
+
+// =========================================================
+// HỆ THỐNG BOSS DUNGEON (TIME-ATTACK)
+// =========================================================
+const BOSS_CONFIG = {
+    // 1. Boss Thanh Diệp Lâm (Dành cho cấp 9 đột phá)
+    'boss_forest': {
+        id: 'boss_forest',
+        name: 'Huyết Trư Yêu Vương',
+        icon: '👹',
+        mapSpawn: 'forest',
+        hp: 2500,               // Máu cực trâu so với Heo thường (50 HP)
+        damage: 40,             // Sát thương cao, ép người chơi phải né hoặc có giáp tốt
+        size: 80,               // Kích thước to gấp đôi quái thường (Quái thường ~ 40px)
+        speed: 120,             // Tốc độ chạy lùa người chơi
+        lockTime: 60,           // 60 giây để dứt điểm (Thời gian thực)
+        xp: 1000,
+        drops: [
+            { id: 'boar_king_core', count: 1, rate: 1.0 }, // 100% rớt 1 Yêu Đan (Bắt buộc)
+            { id: 'boar_tusk', count: 5, rate: 1.0 },      // Khuyến mãi thêm 5 nanh heo
+            { id: 'copper', count: 5, rate: 0.5 }          // 50% rớt thêm khoáng
+        ]
+    },
+
+    // 2. Boss Huyễn Sa Mạc (Dành cho cấp 19 đột phá)
+    'boss_desert': {
+        id: 'boss_desert',
+        name: 'Tử Sa Ma Yết',
+        icon: '🦂', // Sẽ vẽ to ra nhờ thuộc tính size
+        mapSpawn: 'desert',
+        hp: 12000,
+        damage: 150,
+        size: 100,              // Rất to
+        speed: 140,
+        lockTime: 90,           // 90 giây cho trận chiến
+        xp: 3000,
+        drops: [
+            { id: 'scorpion_king_core', count: 1, rate: 1.0 }, 
+            { id: 'scorpion_tail', count: 8, rate: 1.0 },
+            { id: 'iron', count: 8, rate: 0.5 }
+        ]
+    },
+
+    // 3. Boss Cực Hàn Băng Ngục (Dành cho cấp 29 đột phá)
+    'boss_ice': {
+        id: 'boss_ice',
+        name: 'Băng Sương Cự Viên',
+        icon: '🧌',
+        mapSpawn: 'ice',
+        hp: 45000,
+        damage: 400,
+        size: 120,              // Khổng lồ
+        speed: 110,             // Chạy chậm nhưng gõ đau
+        lockTime: 120,          // 2 phút
+        xp: 8000,
+        drops: [
+            { id: 'frost_ape_core', count: 1, rate: 1.0 },
+            { id: 'ice_bear_claw', count: 10, rate: 1.0 },
+            { id: 'ice_crystal', count: 10, rate: 0.5 }
+        ]
+    },
+
+    // 4. Boss Thâm Đáy Hải Vực (Dành cho cấp 39 đột phá)
+    'boss_ocean': {
+        id: 'boss_ocean',
+        name: 'Độc Giác Giao Long',
+        icon: '🐉',
+        mapSpawn: 'ocean',
+        hp: 150000,
+        damage: 1200,
+        size: 150,              // Chiếm cả màn hình
+        speed: 180,             // Rất nhanh
+        lockTime: 180,          // 3 phút
+        xp: 25000,
+        drops: [
+            { id: 'flood_dragon_core', count: 1, rate: 1.0 },
+            { id: 'shark_fin', count: 12, rate: 1.0 },
+            { id: 'pearl', count: 12, rate: 0.5 }
+        ]
+    },
+
+    // 5. Boss Luyện Ngục Diệm Sơn (Dành cho cấp 49 đột phá)
+    'boss_volcano': {
+        id: 'boss_volcano',
+        name: 'Luyện Ngục Ma Tôn',
+        icon: '👺',
+        mapSpawn: 'volcano',
+        hp: 500000,             // Boss tối thượng, máu nửa triệu
+        damage: 3500,
+        size: 180,              // Áp đảo tuyệt đối
+        speed: 220,             // Nhanh như chớp
+        lockTime: 300,          // 5 phút sinh tử
+        xp: 100000,
+        drops: [
+            { id: 'demon_lord_core', count: 1, rate: 1.0 },
+            { id: 'demon_horn', count: 15, rate: 1.0 },
+            { id: 'obsidian', count: 15, rate: 1.0 }       // Boss cuối rớt 100% khoáng hiếm
+        ]
     }
 };

@@ -3,6 +3,7 @@ import {
     , WEAPONS
     , ENEMY_STATS
     , BOSS_CONFIG
+    , DUNGEON_BOSS_CONFIG
     , VISUAL_CONFIG
     , LEVEL_CONFIG
     , XP_ORB_CONFIG
@@ -494,7 +495,7 @@ function spawnMapEnemy() {
 
 function spawnBoss() {
     state.enemies = []; ui.setElementDisplay('boss-warning', 'block'); setTimeout(() => ui.setElementDisplay('boss-warning', 'none'), 3000);
-    state.boss = { x: state.player.x, y: state.player.y - 400, hp: BOSS_CONFIG.maxHp, maxHp: BOSS_CONFIG.maxHp, speed: BOSS_CONFIG.speed, size: BOSS_CONFIG.size, currentCd: 2.0, state: 'idle', timer: 0 };
+    state.boss = { x: state.player.x, y: state.player.y - 400, hp: DUNGEON_BOSS_CONFIG.maxHp, maxHp: DUNGEON_BOSS_CONFIG.maxHp, speed: DUNGEON_BOSS_CONFIG.speed, size: DUNGEON_BOSS_CONFIG.size, currentCd: 2.0, state: 'idle', timer: 0 };
     ui.setElementDisplay('boss-ui', 'flex');
 }
 
@@ -767,10 +768,10 @@ function update(dt) {
         state.playTime += dt;
         const tutorialEl = document.getElementById('boss-goal-tutorial');
         if (!state.boss) {
-            const timeLeft = Math.max(0, BOSS_CONFIG.spawnTime - state.playTime);
+            const timeLeft = Math.max(0, DUNGEON_BOSS_CONFIG.spawnTime - state.playTime);
             const minutes = Math.floor(timeLeft / 60); const seconds = Math.floor(timeLeft % 60).toString().padStart(2, '0');
             tutorialEl.innerText = `Ma Tôn giá lâm sau: ${minutes}:${seconds}`; tutorialEl.style.color = '#ffaa00';
-            if (state.playTime >= BOSS_CONFIG.spawnTime) spawnBoss();
+            if (state.playTime >= DUNGEON_BOSS_CONFIG.spawnTime) spawnBoss();
         } else {
             tutorialEl.innerText = `⚠️ TIÊU DIỆT MA TÔN! ⚠️`; tutorialEl.style.color = '#ff3333';
         }
