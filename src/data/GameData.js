@@ -9,6 +9,129 @@ export const ENEMY_STATS = {
     names: ["Huyết Bức", "Ma Lang", "Cốt Tướng", "Oán Hồn", "Độc Chu", "Hắc Hổ", "Quỷ Mị"]
 };
 
+// =========================================================
+// HỆ THỐNG PHÂN NHÁNH PHÁP KHÍ BẢN MỆNH (FULL CONFIGS)
+// =========================================================
+
+export const WEAPON_BRANCHES = {
+    'sword': {
+        'blood': {
+            id: 'sword_blood', // assets/icon/weapon/sword/sword_blood.png
+            name: 'Xích Long',
+            desc: 'Thanh kiếm đúc từ huyết tinh của chân rồng, gây ra những vết thương vĩnh viễn không thể khép miệng.',
+            pros: 'Gây trạng thái Chảy Máu (Bleeding) theo thời gian, sát thương dồn cực mạnh lên Boss.',
+            cons: 'Cần thời gian để tích lũy sát thương, không có khả năng khống chế.',
+            tiers: [
+                { tier: 1, name: 'Xích Long Kiếm', color: '#55ff55', stats: { attack: 120, maxHp: 500, attackSpeed: 0.05, crit: 5, bleed: 10 } },
+                { tier: 2, name: 'Xích Long Kiếm +1', color: '#00ccff', stats: { attack: 280, maxHp: 1200, attackSpeed: 0.1, crit: 8, bleed: 25 } },
+                { tier: 3, name: 'Xích Long Kiếm +2', color: '#cc00ff', stats: { attack: 650, maxHp: 3000, attackSpeed: 0.15, crit: 12, bleed: 60 } },
+                { tier: 4, name: 'Xích Long Kiếm +3', color: '#ffaa00', stats: { attack: 1500, maxHp: 7500, attackSpeed: 0.25, crit: 18, bleed: 150 } },
+                { tier: 5, name: 'Xích Long Huyết Kiếm', color: '#ff3333', stats: { attack: 3500, maxHp: 18000, attackSpeed: 0.4, crit: 25, bleed: 400 } }
+            ]
+        },
+        'ice': {
+            id: 'sword_ice', // assets/icon/weapon/sword/sword_ice.png
+            name: 'Hàn Băng',
+            desc: 'Lưỡi kiếm tỏa ra hàn khí tuyệt đối của Bắc Cực, có khả năng làm ngưng trệ dòng máu của mọi sinh linh.',
+            pros: 'Khống chế kẻ địch mạnh mẽ bằng hiệu ứng Làm Chậm (Slow) và Đóng Băng (Freeze).',
+            cons: 'Sát thương cơ bản chỉ ở mức trung bình.',
+            tiers: [
+                { tier: 1, name: 'Hàn Băng Kiếm', color: '#55ff55', stats: { attack: 100, maxHp: 400, attackSpeed: 0.1, crit: 5, freeze: 5 } },
+                { tier: 2, name: 'Hàn Băng Kiếm +1', color: '#00ccff', stats: { attack: 240, maxHp: 1000, attackSpeed: 0.15, crit: 10, freeze: 10 } },
+                { tier: 3, name: 'Hàn Băng Kiếm +2', color: '#cc00ff', stats: { attack: 550, maxHp: 2500, attackSpeed: 0.2, crit: 15, freeze: 20 } },
+                { tier: 4, name: 'Hàn Băng Kiếm +3', color: '#ffaa00', stats: { attack: 1300, maxHp: 6000, attackSpeed: 0.3, crit: 20, freeze: 35 } },
+                { tier: 5, name: 'Hàn Băng Linh Kiếm', color: '#ff3333', stats: { attack: 3000, maxHp: 15000, attackSpeed: 0.5, crit: 30, freeze: 60 } }
+            ]
+        },
+        'sea': {
+            id: 'sword_sea', // assets/icon/weapon/sword/sword_sea.png
+            name: 'Trấn Hải',
+            desc: 'Mang theo hơi thở của đại dương, thanh kiếm này bảo hộ chủ nhân bằng dòng năng lượng hồi phục vô tận.',
+            pros: 'Hút máu (Lifesteal) cực tốt và tăng lượng máu tối đa rất lớn, giúp nhân vật bất tử.',
+            cons: 'Sát thương thấp nhất trong 4 hệ kiếm.',
+            tiers: [
+                { tier: 1, name: 'Trấn Hải Kiếm', color: '#55ff55', stats: { attack: 80, maxHp: 800, attackSpeed: 0.05, crit: 2, lifesteal: 5 } },
+                { tier: 2, name: 'Trấn Hải Kiếm +1', color: '#00ccff', stats: { attack: 200, maxHp: 2000, attackSpeed: 0.1, crit: 5, lifesteal: 8 } },
+                { tier: 3, name: 'Trấn Hải Kiếm +2', color: '#cc00ff', stats: { attack: 450, maxHp: 5000, attackSpeed: 0.15, crit: 8, lifesteal: 12 } },
+                { tier: 4, name: 'Trấn Hải Kiếm +3', color: '#ffaa00', stats: { attack: 1100, maxHp: 12000, attackSpeed: 0.2, crit: 12, lifesteal: 18 } },
+                { tier: 5, name: 'Trấn Hải Thần Kiếm', color: '#ff3333', stats: { attack: 2500, maxHp: 30000, attackSpeed: 0.3, crit: 20, lifesteal: 30 } }
+            ]
+        },
+        'sand': {
+            id: 'sword_sand', // assets/icon/weapon/sword/sword_sand.png
+            name: 'Huyễn Sa',
+            desc: 'Trọng kiếm khổng lồ sử dụng sức mạnh vật lý thô bạo để nghiền nát mọi giáp trụ.',
+            pros: 'Sát thương vật lý thuần (Pure DMG) cực cao, đòn đánh có khả năng đánh văng (Knockback).',
+            cons: 'Tốc độ đánh rất chậm, tạo kẽ hở giữa các đòn tấn công.',
+            tiers: [
+                { tier: 1, name: 'Huyễn Sa Kiếm', color: '#55ff55', stats: { attack: 200, maxHp: 400, attackSpeed: -0.1, crit: 10 } },
+                { tier: 2, name: 'Huyễn Sa Kiếm +1', color: '#00ccff', stats: { attack: 450, maxHp: 900, attackSpeed: -0.15, crit: 15 } },
+                { tier: 3, name: 'Huyễn Sa Kiếm +2', color: '#cc00ff', stats: { attack: 1000, maxHp: 2200, attackSpeed: -0.2, crit: 20 } },
+                { tier: 4, name: 'Huyễn Sa Kiếm +3', color: '#ffaa00', stats: { attack: 2200, maxHp: 5000, attackSpeed: -0.25, crit: 30 } },
+                { tier: 5, name: 'Huyễn Sa Trọng Kiếm', color: '#ff3333', stats: { attack: 5000, maxHp: 12000, attackSpeed: -0.3, crit: 45 } }
+            ]
+        }
+    },
+    'bow': {
+        'poison': {
+            id: 'bow_poison', // assets/icon/weapon/bow/bow_poison.png
+            name: 'Độc Xà',
+            desc: 'Mũi tên mang theo kịch độc của mãng xà cổ đại, thấm vào máu thịt kẻ thù ngay khi chạm phải.',
+            pros: 'Gây sát thương Độc (Poison DoT) cực mạnh, hiệu quả cao khi đánh quái đông.',
+            cons: 'Không thể gây sát thương chí mạng (0% Crit).',
+            tiers: [
+                { tier: 1, name: 'Độc Xà Cung', color: '#55ff55', stats: { attack: 100, maxHp: 200, attackSpeed: 0.1, crit: 0, poison: 15 } },
+                { tier: 2, name: 'Độc Xà Cung +1', color: '#00ccff', stats: { attack: 220, maxHp: 500, attackSpeed: 0.2, crit: 0, poison: 35 } },
+                { tier: 3, name: 'Độc Xà Cung +2', color: '#cc00ff', stats: { attack: 500, maxHp: 1200, attackSpeed: 0.35, crit: 0, poison: 80 } },
+                { tier: 4, name: 'Độc Xà Cung +3', color: '#ffaa00', stats: { attack: 1200, maxHp: 3000, attackSpeed: 0.6, crit: 0, poison: 200 } },
+                { tier: 5, name: 'Độc Xà Thiết Cung', color: '#ff3333', stats: { attack: 2800, maxHp: 7000, attackSpeed: 1.0, crit: 0, poison: 500 } }
+            ]
+        },
+        'ice': {
+            id: 'bow_ice', // assets/icon/weapon/bow/bow_ice.png
+            name: 'Băng Sương',
+            desc: 'Những mũi tên buốt giá làm chậm mọi hành động của mục tiêu, khiến chúng trở thành bia tập bắn.',
+            pros: 'Tốc độ bắn rất nhanh, khả năng thả diều (Kiting) kẻ địch tuyệt vời.',
+            cons: 'Sát thương mỗi mũi tên thấp hơn so với các hệ cung khác.',
+            tiers: [
+                { tier: 1, name: 'Băng Sương Cung', color: '#55ff55', stats: { attack: 90, maxHp: 200, attackSpeed: 0.15, crit: 10, slow: 20 } },
+                { tier: 2, name: 'Băng Sương Cung +1', color: '#00ccff', stats: { attack: 200, maxHp: 450, attackSpeed: 0.25, crit: 15, slow: 30 } },
+                { tier: 3, name: 'Băng Sương Cung +2', color: '#cc00ff', stats: { attack: 450, maxHp: 1000, attackSpeed: 0.4, crit: 25, slow: 45 } },
+                { tier: 4, name: 'Băng Sương Cung +3', color: '#ffaa00', stats: { attack: 1100, maxHp: 2500, attackSpeed: 0.7, crit: 40, slow: 60 } },
+                { tier: 5, name: 'Băng Sương Xuyên Cung', color: '#ff3333', stats: { attack: 2500, maxHp: 6000, attackSpeed: 1.2, crit: 60, slow: 80 } }
+            ]
+        },
+        'sea': {
+            id: 'bow_sea', // assets/icon/weapon/bow/bow_sea.png
+            name: 'Giao Long',
+            desc: 'Sử dụng linh phách của Giao Long để hồi phục linh lực cho chủ nhân qua mỗi phát bắn.',
+            pros: 'Hồi phục máu tầm xa, giúp nhân vật cực kỳ bền bỉ trong các trận chiến dài.',
+            cons: 'Chỉ số tấn công và phòng thủ ở mức trung bình, không có đột phá.',
+            tiers: [
+                { tier: 1, name: 'Giao Long Cung', color: '#55ff55', stats: { attack: 85, maxHp: 300, attackSpeed: 0.1, crit: 5, lifesteal: 3 } },
+                { tier: 2, name: 'Giao Long Cung +1', color: '#00ccff', stats: { attack: 190, maxHp: 700, attackSpeed: 0.2, crit: 10, lifesteal: 6 } },
+                { tier: 3, name: 'Giao Long Cung +2', color: '#cc00ff', stats: { attack: 420, maxHp: 1600, attackSpeed: 0.35, crit: 18, lifesteal: 10 } },
+                { tier: 4, name: 'Giao Long Cung +3', color: '#ffaa00', stats: { attack: 1000, maxHp: 4000, attackSpeed: 0.6, crit: 28, lifesteal: 15 } },
+                { tier: 5, name: 'Giao Long Cốt Cung', color: '#ff3333', stats: { attack: 2300, maxHp: 10000, attackSpeed: 1.0, crit: 45, lifesteal: 25 } }
+            ]
+        },
+        'sun': {
+            id: 'bow_sun', // assets/icon/weapon/bow/bow_sun.png
+            name: 'Lạc Nhật',
+            desc: 'Mang theo uy năng của thái dương, mũi tên bắn ra có sức mạnh hủy diệt vạn vật.',
+            pros: 'Sát thương chí mạng và sát thương vật lý lớn nhất, kết liễu mục tiêu cực nhanh.',
+            cons: 'Tốc độ bắn rất chậm, yêu cầu khả năng căn vị trí tốt.',
+            tiers: [
+                { tier: 1, name: 'Lạc Nhật Cung', color: '#55ff55', stats: { attack: 150, maxHp: 150, attackSpeed: -0.1, crit: 15 } },
+                { tier: 2, name: 'Lạc Nhật Cung +1', color: '#00ccff', stats: { attack: 350, maxHp: 350, attackSpeed: -0.15, crit: 25 } },
+                { tier: 3, name: 'Lạc Nhật Cung +2', color: '#cc00ff', stats: { attack: 800, maxHp: 800, attackSpeed: -0.2, crit: 40 } },
+                { tier: 4, name: 'Lạc Nhật Cung +3', color: '#ffaa00', stats: { attack: 1800, maxHp: 1800, attackSpeed: -0.25, crit: 60 } },
+                { tier: 5, name: 'Lạc Nhật Thần Cung', color: '#ff3333', stats: { attack: 4500, maxHp: 4500, attackSpeed: -0.3, crit: 85 } }
+            ]
+        }
+    }
+};
+
 // --- PHẦN MỚI: CẤU HÌNH BOSS ---
 export const DUNGEON_BOSS_CONFIG = {
     // Điều kiện xuất hiện
@@ -225,7 +348,7 @@ export const BOSS_CONFIG = {
         lockTime: 90,           // 90 giây cho trận chiến
         xp: 3000,
         drops: [
-            { id: 'scorpion_king_core', count: 1, rate: 1.0 }, 
+            { id: 'scorpion_king_core', count: 1, rate: 1.0 },
             { id: 'scorpion_tail', count: 8, rate: 1.0 },
             { id: 'iron', count: 8, rate: 0.5 }
         ]
