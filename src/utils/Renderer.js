@@ -146,6 +146,37 @@ export class Renderer {
                 ctx.fillStyle = '#ffaa00'; ctx.font = 'bold 11px Arial'; ctx.fillText(mapConfig.ore.item.name, o.x, o.y - 25);
             });
 
+            if (state.bossReturnPortal) {
+                ctx.fillStyle = 'rgba(255, 0, 255, 0.15)';
+                ctx.beginPath(); ctx.arc(state.bossReturnPortal.x, state.bossReturnPortal.y, 45, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = '#ff00ff'; ctx.lineWidth = 3; ctx.stroke();
+                ctx.font = '32px Arial'; ctx.fillText('🌀', state.bossReturnPortal.x, state.bossReturnPortal.y);
+                
+                ctx.fillStyle = '#ff00ff'; ctx.font = 'bold 12px Arial'; 
+                ctx.fillText("CỔNG VỀ LÀNG", state.bossReturnPortal.x, state.bossReturnPortal.y - 35);
+            }
+
+            if (state.droppedItems && state.droppedItems.length > 0) {
+                state.droppedItems.forEach(drop => {
+                    // 1. Vẽ Icon của vật phẩm phong cách lơ lửng dập dềnh nhẹ
+                    const bounceY = Math.sin(performance.now() * 0.005 + drop.x) * 4;
+                    ctx.font = '26px Arial'; 
+                    ctx.fillText(drop.item.icon, drop.x, drop.y + bounceY);
+
+                    // 2. Vẽ nhãn Text (Tên vật phẩm + Số lượng) phía trên icon
+                    ctx.fillStyle = '#ffcc00'; // Màu vàng hoàng kim sang trọng cho đồ Boss
+                    ctx.font = 'bold 12px "Segoe UI", sans-serif';
+                    ctx.textAlign = 'center';
+                    
+                    // Tạo viền đen bao quanh chữ để đứng trên nền map tối không bị chìm
+                    const txt = `${drop.item.name} x${drop.count}`;
+                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = '#000000';
+                    ctx.strokeText(txt, drop.x, drop.y - 25 + bounceY);
+                    ctx.fillText(txt, drop.x, drop.y - 25 + bounceY);
+                });
+            }
+
             if (state.isMining) {
                 const barW = 60, barH = 8;
                 const progress = (3.0 - state.miningTimer) / 3.0;
@@ -200,6 +231,77 @@ export class Renderer {
             ctx.fillStyle = 'red'; ctx.shadowBlur = 10; ctx.shadowColor = 'red'; ctx.fillRect(5, -8, 12, 4); ctx.fillRect(5, 4, 12, 4);
             ctx.restore();
             ctx.fillStyle = '#220022'; ctx.fillRect(e.x - 20, e.y - 30, 40, 5); ctx.fillStyle = '#aa00ff'; ctx.fillRect(e.x - 20, e.y - 30, 40 * (e.hp / e.maxHp), 5);
+
+            if (e.effects && e.effects.ice) {
+                const ice = e.effects.ice;
+                const startX = e.x - 12;
+                const startY = e.y - 42; // Nằm trên thanh máu một chút
+
+                ctx.save();
+                ctx.font = '11px Arial';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                
+                // Vẽ Hoa Tuyết định danh hiệu ứng
+                ctx.fillStyle = '#00ffff';
+                ctx.fillText('❄️', startX - 13, startY);
+
+                // Vẽ 3 ô vuông đại diện cho tỉ lệ lấp đầy (fill) 1/3, 2/3, 3/3
+                for (let i = 0; i < 3; i++) {
+                    ctx.beginPath();
+                    ctx.rect(startX + (i * 9), startY - 4, 6, 6);
+                    
+                    if (i < ice.stacks) {
+                        ctx.fillStyle = '#00ffff'; // Ô được fill sáng màu xanh băng
+                        ctx.shadowBlur = 4;
+                        ctx.shadowColor = '#00ffff';
+                        ctx.fill();
+                    } else {
+                        ctx.fillStyle = '#111111'; // Phần chưa fill sẽ có màu đen tối
+                        ctx.shadowBlur = 0;
+                        ctx.fill();
+                        ctx.strokeStyle = '#444444'; // Viền xám bọc ngoài cho dễ nhìn
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                    }
+                }
+                ctx.restore();
+            } 
+            else if (e.effects && e.effects.bleed) {
+                const bleed = e.effects.bleed;
+                const startX = e.x - 22; // Cần không gian rộng hơn một chút vì có 6 nấc
+                const startY = e.y - 42; 
+
+                ctx.save();
+                ctx.font = '11px Arial';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                
+                // Vẽ biểu tượng Giọt Máu 🩸
+                ctx.fillText('🩸', startX - 13, startY);
+
+                // Vẽ vòng lặp hiển thị 6 nấc ô vuông nhỏ (fill đầy dần theo stack số lượng)
+                for (let i = 0; i < 6; i++) {
+                    ctx.beginPath();
+                    ctx.rect(startX + (i * 7), startY - 3, 5, 5); // Ô vuông 5x5 nhỏ gọn thanh thoát
+                    
+                    if (i < bleed.stacks) {
+                        ctx.fillStyle = '#ff1111'; // Ô đã được tích: sáng màu đỏ rực
+                        ctx.shadowBlur = 4;
+                        ctx.shadowColor = '#ff1111';
+                        ctx.fill();
+                    } else {
+                        ctx.fillStyle = '#111111'; // Ô chưa tích: màu đen tối
+                        ctx.shadowBlur = 0;
+                        ctx.fill();
+                        ctx.strokeStyle = '#551111'; // Viền đỏ thẫm bao bọc tinh tế
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                    }
+                }
+                ctx.restore();
+            }
+
 
             ctx.fillStyle = '#ffaa00';
             ctx.font = 'bold 12px "Segoe UI", sans-serif';

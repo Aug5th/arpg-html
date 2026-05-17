@@ -60,9 +60,9 @@ export const WEAPON_BRANCHES = {
         'sand': {
             id: 'sword_sand', // assets/icon/weapon/sword/sword_sand.png
             name: 'Huyễn Sa',
-            desc: 'Trọng kiếm khổng lồ sử dụng sức mạnh vật lý thô bạo để nghiền nát mọi giáp trụ.',
-            pros: 'Sát thương vật lý thuần (Pure DMG) cực cao, đòn đánh có khả năng đánh văng (Knockback).',
-            cons: 'Tốc độ đánh rất chậm, tạo kẽ hở giữa các đòn tấn công.',
+            desc: 'Cung làm từ linh cốt mãng xà cổ đại, tiêm kịch độc ăn mòn sinh mệnh mục tiêu qua từng phát bắn.',
+            pros: 'Gây sát thương kịch độc rút máu cực mạnh, các tick độc có thể bạo kích.',
+            cons: 'Sát thương bạo kích ban đầu của đòn bắn bị phân tách nhẹ.',
             tiers: [
                 { tier: 1, name: 'Huyễn Sa Kiếm', color: '#55ff55', stats: { attack: 200, maxHp: 400, attackSpeed: -0.1, crit: 10 } },
                 { tier: 2, name: 'Huyễn Sa Kiếm +1', color: '#00ccff', stats: { attack: 450, maxHp: 900, attackSpeed: -0.15, crit: 15 } },
@@ -215,40 +215,40 @@ export const ITEMS = {
     // Rừng Rậm (1-10)
     HERB: { id: 'herb', name: 'Linh Thảo', icon: '🌿', type: 'material', stackable: true },
     COPPER: { id: 'copper', name: 'Đồng Khoáng', icon: '🧱', type: 'material', stackable: true },
-    BOAR_TUSK: { id: 'boar_tusk', name: 'Nanh Heo Rừng', icon: '🦴', type: 'material', stackable: true },
-    WOLF_PELT: { id: 'wolf_pelt', name: 'Da Sói', icon: '🟫', type: 'material', stackable: true },
+    BOAR_TUSK: { id: 'boar_tusk', name: 'Nanh Heo Rừng', icon: '🦴', type: 'material', pickupType: 'instant', stackable: true },
+    WOLF_PELT: { id: 'wolf_pelt', name: 'Da Sói', icon: '🟫', type: 'material', pickupType: 'instant', stackable: true },
 
     // Sa Mạc (20-30)
     CACTUS: { id: 'cactus', name: 'Xương Rồng', icon: '🌵', type: 'material', stackable: true },
     IRON: { id: 'iron', name: 'Thiết Khoáng', icon: '🪨', type: 'material', stackable: true },
-    SCORPION_TAIL: { id: 'scorpion_tail', name: 'Đuôi Bọ Cạp', icon: '🦂', type: 'material', stackable: true },
-    SNAKE_VENOM: { id: 'snake_venom', name: 'Nọc Rắn', icon: '🐍', type: 'material', stackable: true },
+    SCORPION_TAIL: { id: 'scorpion_tail', name: 'Đuôi Bọ Cạp', icon: '🦂', type: 'material', pickupType: 'instant', stackable: true },
+    SNAKE_VENOM: { id: 'snake_venom', name: 'Nọc Rắn', icon: '🐍', type: 'material', pickupType: 'instant', stackable: true },
 
     // Băng Tuyết (30-40)
     SNOW_LOTUS: { id: 'snow_lotus', name: 'Tuyết Liên', icon: '❄️', type: 'material', stackable: true },
     ICE_CRYSTAL: { id: 'ice_crystal', name: 'Băng Tinh', icon: '💎', type: 'material', stackable: true },
-    YETI_FUR: { id: 'yeti_fur', name: 'Lông Dã Nhân', icon: '🧥', type: 'material', stackable: true },
-    ICE_BEAR_CLAW: { id: 'ice_bear_claw', name: 'Móng Gấu', icon: '🐾', type: 'material', stackable: true },
+    YETI_FUR: { id: 'yeti_fur', name: 'Lông Dã Nhân', icon: '🧥', type: 'material', pickupType: 'instant', stackable: true },
+    ICE_BEAR_CLAW: { id: 'ice_bear_claw', name: 'Móng Gấu', icon: '🐾', type: 'material', pickupType: 'instant', stackable: true },
 
     // Biển Sâu (40-50)
     SEAWEED: { id: 'seaweed', name: 'Hải Tảo', icon: '🥬', type: 'material', stackable: true },
     PEARL: { id: 'pearl', name: 'Trân Châu', icon: '🦪', type: 'material', stackable: true },
-    SHARK_FIN: { id: 'shark_fin', name: 'Vây Cá Mập', icon: '🦈', type: 'material', stackable: true },
-    CRAB_SHELL: { id: 'crab_shell', name: 'Mai Cua', icon: '🦀', type: 'material', stackable: true },
+    SHARK_FIN: { id: 'shark_fin', name: 'Vây Cá Mập', icon: '🦈', type: 'material', pickupType: 'instant', stackable: true },
+    CRAB_SHELL: { id: 'crab_shell', name: 'Mai Cua', icon: '🦀', type: 'material', pickupType: 'instant', stackable: true },
 
     // Núi Lửa (50-60)
     FIRE_FLOWER: { id: 'fire_flower', name: 'Hỏa Diệm Hoa', icon: '🔥', type: 'material', stackable: true },
     OBSIDIAN: { id: 'obsidian', name: 'Hắc Diện Thạch', icon: '🖤', type: 'material', stackable: true },
-    DRAGON_SCALE: { id: 'dragon_scale', name: 'Vảy Rồng', icon: '🐉', type: 'material', stackable: true },
-    DEMON_HORN: { id: 'demon_horn', name: 'Sừng Ác Quỷ', icon: '😈', type: 'material', stackable: true },
+    DRAGON_SCALE: { id: 'dragon_scale', name: 'Vảy Rồng', icon: '🐉', type: 'material', pickupType: 'instant', stackable: true },
+    DEMON_HORN: { id: 'demon_horn', name: 'Sừng Ác Quỷ', icon: '😈', type: 'material', pickupType: 'instant', stackable: true },
 
     // BOSSES
     // --- LÕI YÊU ĐAN (BOSS DROPS) ---
-    BOAR_KING_CORE: { id: 'boar_king_core', name: 'Yêu Đan Huyết Trư', icon: '🔴', type: 'material', desc: 'Lõi sức mạnh của Huyết Trư Yêu Vương.' },
-    SCORPION_KING_CORE: { id: 'scorpion_king_core', name: 'Yêu Đan Ma Yết', icon: '🟠', type: 'material', desc: 'Lõi sức mạnh của Tử Sa Ma Yết.' },
-    FROST_APE_CORE: { id: 'frost_ape_core', name: 'Yêu Đan Cự Viên', icon: '🔵', type: 'material', desc: 'Lõi sức mạnh của Băng Sương Cự Viên.' },
-    FLOOD_DRAGON_CORE: { id: 'flood_dragon_core', name: 'Yêu Đan Giao Long', icon: '🟣', type: 'material', desc: 'Lõi sức mạnh của Độc Giác Giao Long.' },
-    DEMON_LORD_CORE: { id: 'demon_lord_core', name: 'Ma Tôn Bản Nguyên', icon: '❤️‍🔥', type: 'material', desc: 'Bản nguyên chi lực của Luyện Ngục Ma Tôn.' }
+    BOAR_KING_CORE: { id: 'boar_king_core', name: 'Yêu Đan Huyết Trư', icon: '🔴', type: 'material', pickupType: 'manual', desc: 'Lõi sức mạnh của Huyết Trư Yêu Vương.' },
+    SCORPION_KING_CORE: { id: 'scorpion_king_core', name: 'Yêu Đan Ma Yết', icon: '🟠', type: 'material', pickupType: 'manual', desc: 'Lõi sức mạnh của Tử Sa Ma Yết.' },
+    FROST_APE_CORE: { id: 'frost_ape_core', name: 'Yêu Đan Cự Viên', icon: '🔵', type: 'material', pickupType: 'manual', desc: 'Lõi sức mạnh của Băng Sương Cự Viên.' },
+    FLOOD_DRAGON_CORE: { id: 'flood_dragon_core', name: 'Yêu Đan Giao Long', icon: '🟣', type: 'material', pickupType: 'manual', desc: 'Lõi sức mạnh của Độc Giác Giao Long.' },
+    DEMON_LORD_CORE: { id: 'demon_lord_core', name: 'Ma Tôn Bản Nguyên', icon: '❤️‍🔥', type: 'material', pickupType: 'manual', desc: 'Bản nguyên chi lực của Luyện Ngục Ma Tôn.' }
 
 };
 

@@ -66,8 +66,10 @@ const state = {
     canEnterPortal: false,
     isInBossMap: false,
     bossLockTimeLeft: 0,
-    weaponTier: 1,      // Cấp vũ khí hiện tại (1 -> 5)
-    souls: 0,           // Số lượng Hồn phách thu thập được
+    weaponTier: 1,
+    souls: 0,
+    droppedItems: [],
+    bossReturnPortal: null
 };
 
 
@@ -243,6 +245,50 @@ input.onKeyDownAction = (k) => {
 
             const mapConfig = MAP_CONFIG[state.currentMap];
 
+            // ========================================================
+            // ƯU TIÊN 1: KIỂM TRA NHẶT VẬT PHẨM RƠI ĐẤT TỪ BOSS (HỆ THỦ CÔNG)
+            // ========================================================
+            if (state.droppedItems && state.droppedItems.length > 0) {
+                // Tìm vật phẩm gần người chơi nhất trong phạm vi nhặt đồ (70px)
+                const closeItem = state.droppedItems.find(item => Math.hypot(state.player.x - item.x, state.player.y - item.y) < 70);
+                if (closeItem) {
+                    // Tiến hành nhặt thử vật phẩm đầu tiên vào túi đồ
+                    const success = addItemToInventory(closeItem.item);
+                    if (success) {
+                        // Vì hàm addItemToInventory tăng 1 count mỗi lần gọi, ta lặp chạy nốt số lượng count còn lại
+                        for (let i = 1; i < closeItem.count; i++) {
+                            addItemToInventory(closeItem.item);
+                        }
+
+                        // Tạo text hiển thị nhặt thành công bay lên
+                        const txt = ui.createDmgText(`+${closeItem.count} ${closeItem.item.name}`, "#ffff00", document.getElementById('damage-container'));
+                        state.vfxs.push({ type: 'text', el: txt, x: closeItem.x, y: closeItem.y - 30, vy: -50, life: 1.5 });
+
+                        // Loại bỏ món đồ này khỏi mặt đất
+                        state.droppedItems = state.droppedItems.filter(i => i !== closeItem);
+                        window.updateInventoryUI();
+                        return; // Kết thúc hành động nhặt đồ thành công
+                    } else {
+                        return; // Túi đồ đầy, không cho nhặt tiếp
+                    }
+                }
+            }
+
+            // ========================================================
+            // ƯU TIÊN 2: KIỂM TRA CỔNG DỊCH CHUYỂN VỀ LÀNG CỦA BOSS
+            // ========================================================
+            if (state.bossReturnPortal) {
+                const distReturn = Math.hypot(state.player.x - state.bossReturnPortal.x, state.player.y - state.bossReturnPortal.y);
+                if (distReturn < 80) {
+                    // Dọn dẹp sạch sẽ map chiến trường trước khi rút lui
+                    state.bossReturnPortal = null;
+                    state.droppedItems = [];
+                    window.exitToVillage(); // Quay về làng, hồi máu đầy và lưu tiến trình
+                    return;
+                }
+            }
+
+            // Các logic dịch chuyển map hoặc đào khoáng cũ giữ nguyên phía dưới...
             if (state.canEnterPortal && !state.isInBossMap) {
                 window.enterBossMap();
                 return;
@@ -379,116 +425,208 @@ function checkRectDamage(cx, cy, ang, len, wid, dmg) {
     });
 }
 
-function applyDamage(entity, baseDmg) {
-    // 1. TÍNH TOÁN BẠO KÍCH (CRIT)
-    let finalDmg = baseDmg;
+function applyDamage(entity, baseDmg, isCritOverride = null, damageType = 'normal') {
     let isCrit = false;
+    
+    // 1. XỬ LÝ CRIT (Chỉ đòn đánh thường mới roll Crit, sát thương DoT/Nổ không roll lại)
+    if (isCritOverride !== null) {
+        isCrit = isCritOverride;
+    } else if (damageType === 'normal') {
+        const critChance = (state.player.crit || 0) / 100;
+        if (Math.random() < critChance) {
+            baseDmg = baseDmg * 2; 
+            isCrit = true;
+        }
+    }
+    let finalDmg = Math.floor(baseDmg);
 
-    // Tỷ lệ bạo kích (VD: player.crit = 15 -> 15%)
-    const critChance = (state.player.crit || 0) / 100;
-    if (Math.random() < critChance) {
-        finalDmg = finalDmg * 2; // Sát thương Bạo Kích x2
-        isCrit = true;
+    // 2. XỬ LÝ HIỆU ỨNG NHÁNH VŨ KHÍ (Chỉ kích hoạt khi đánh thường 'normal')
+    const isEnemyTarget = (state.enemies.includes(entity) || (state.boss && entity === state.boss));
+    if (damageType === 'normal' && isEnemyTarget) {
+        
+        // ========================================================
+        // ĐÃ BUFF CHỈ SỐ: NHÁNH KỊCH ĐỘC (POISON) -> TỔNG 170% DAMAGE
+        // ========================================================
+        if (state.player.weaponBranch === 'poison') {
+            if (!entity.effects) entity.effects = {};
+            const originalDmg = finalDmg;
+
+            // Phát đánh đầu tiên gây 80% sát thương gốc
+            finalDmg = Math.round(originalDmg * 0.8);
+
+            // Mỗi tick độc rút 15% sát thương gốc (6 ticks x 15% = 90%)
+            const damagePerTick = Math.round(originalDmg * 0.15);
+
+            entity.effects.poison = {
+                ticksLeft: 6,
+                timer: 0,
+                damagePerTick: Math.max(1, damagePerTick) // Đảm bảo tối thiểu rút 1 máu
+            };
+            damageType = 'poison_hit'; // Đổi type để phục vụ UI đòn đánh gốc độc
+        } 
+        
+        // --- Nhánh Băng (Giữ nguyên logic cũ) ---
+        else if (state.player.weaponBranch === 'ice') {
+            if (!entity.effects) entity.effects = {};
+            if (!entity.effects.ice) {
+                entity.effects.ice = { stacks: 0, durationLeft: 5.0, explodeTimer: -1, baseDamageRef: finalDmg };
+            }
+            let ice = entity.effects.ice;
+            if (ice.explodeTimer < 0) {
+                ice.stacks = Math.min(3, ice.stacks + 1);
+                ice.durationLeft = 5.0;
+                ice.baseDamageRef = finalDmg;
+                if (ice.stacks === 3) {
+                    ice.explodeTimer = 0.5;
+                }
+            }
+        }
+        
+        // --- Nhánh Máu (Giữ nguyên logic cũ) ---
+        else if (state.player.weaponBranch === 'blood') {
+            if (!entity.effects) entity.effects = {};
+            const originalDmg = finalDmg;
+
+            finalDmg = Math.round(originalDmg * 0.5); // 50% phát đầu
+            const damagePerTick = Math.round(originalDmg * 0.1); // 10% mỗi tick
+
+            if (!entity.effects.bleed) {
+                entity.effects.bleed = {
+                    stacks: 0, durationLeft: 3.0, timer: 0,
+                    damagePerTick: Math.max(1, damagePerTick), baseDamageRef: originalDmg
+                };
+            }
+
+            let bleed = entity.effects.bleed;
+            bleed.stacks = Math.min(6, bleed.stacks + 1);
+            bleed.durationLeft = 3.0;
+            bleed.timer = 0; 
+            bleed.baseDamageRef = originalDmg;
+
+            if (bleed.stacks === 6) {
+                const explodeDmg = bleed.baseDamageRef; 
+                delete entity.effects.bleed;
+                applyDamage(entity, explodeDmg, false, 'bleed_explode');
+                
+                state.vfxs.push({
+                    type: 'circle', color: 'rgba(255, 0, 50, 0.6)',
+                    x: entity.x, y: entity.y, radius: 65, life: 0.2, maxLife: 0.2
+                });
+                return;
+            } else {
+                damageType = 'bleed_hit';
+            }
+        }
     }
 
-    finalDmg = Math.floor(finalDmg); // Làm tròn sát thương
+    // Khấu trừ sinh mệnh thực tế của thực thể
     entity.hp -= finalDmg;
 
-    // 2. TẠO CHỮ SÁT THƯƠNG
-    const color = isCrit ? '#ff3333' : '#ffcc00';
+    // 3. PHÂN PHỐI MÀU SẮC THEO HỆ SÁT THƯƠNG
+    let color = '#ffcc00'; 
+    if (isCrit) color = '#ff3333'; 
 
-    // FIX LỖI NaN: Truyền số finalDmg gốc vào để hệ thống tính toán trước
+    if (damageType === 'poison_dot') {
+        color = isCrit ? '#76ff03' : '#33ff55'; 
+    } else if (damageType === 'ice_explode') {
+        color = '#00d4ff'; 
+    } else if (damageType === 'bleed_dot' || damageType === 'bleed_explode') {
+        color = '#ff1111'; 
+    }
+
+    // Đẩy sát thương gốc dạng Số thuần túy vào UI
     const dmgEl = ui.createDmgText(finalDmg, color, document.getElementById('damage-container'));
 
-    // SAU ĐÓ mới ghi đè nội dung và chỉnh CSS nếu là Bạo Kích
-    if (isCrit) {
-        dmgEl.innerText = `💥${finalDmg}`;
-        dmgEl.style.fontSize = '35px';
+    // ========================================================
+    // ĐÃ TÁI CẤU TRÚC: ĐỊNH DẠNG TEXT HIỂN THỊ TRỰC QUAN SẠCH SẼ
+    // ========================================================
+    if (damageType === 'poison_dot') {
+        // CHỈ HIỂN THỊ ĐẦU LÂU VÀ SỐ DAMAGE (KHÔNG DẤU +, KHÔNG CHỮ THỪA)
+        dmgEl.innerText = `☠️ ${finalDmg}`;
+        dmgEl.style.fontSize = '18px';
+        dmgEl.style.fontWeight = 'bold';
+        dmgEl.style.textShadow = '0 0 6px #33ff55, 1px 1px 2px black';
+    } 
+    else if (damageType === 'bleed_dot') {
+        // CHỈ HIỂN THỊ GIỌT MÁU VÀ SỐ DAMAGE (KHÔNG DẤU +, KHÔNG CHỮ THỪA)
+        dmgEl.innerText = `🩸 ${finalDmg}`;
+        dmgEl.style.fontSize = '18px';
+        dmgEl.style.fontWeight = 'bold';
+        dmgEl.style.textShadow = '0 0 6px #ff1111, 1px 1px 2px black';
+    } 
+    else if (damageType === 'ice_explode') {
+        dmgEl.innerText = `❄️💥 ${finalDmg}`;
+        dmgEl.style.fontSize = '28px';
+        dmgEl.style.fontWeight = 'bold';
+        dmgEl.style.textShadow = '0 0 12px #00d4ff, 1px 1px 3px black';
+    } 
+    else if (damageType === 'bleed_explode') {
+        dmgEl.innerText = `🩸💥 ${finalDmg}`;
+        dmgEl.style.fontSize = '32px';
         dmgEl.style.fontWeight = '900';
-        dmgEl.style.textShadow = '0 0 15px #ff0000, 2px 2px 5px black';
-        dmgEl.style.zIndex = '50';
+        dmgEl.style.textShadow = '0 0 15px #ff0000, 1px 1px 4px black';
+    } 
+    else {
+        if (isCrit) {
+            dmgEl.innerText = `💥${finalDmg}`;
+            dmgEl.style.fontSize = '35px';
+            dmgEl.style.fontWeight = '900';
+            dmgEl.style.textShadow = '0 0 15px #ff0000, 2px 2px 5px black';
+            dmgEl.style.zIndex = '50';
+        }
     }
 
-    // Đẩy hiệu ứng text bay lên (Crit bay cao hơn, tồn tại lâu hơn 1 xíu)
-    state.vfxs.push({ type: 'text', el: dmgEl, x: entity.x + (Math.random() - 0.5) * 40, y: entity.y, vy: isCrit ? -80 : -50, life: isCrit ? 1.5 : 1.0 });
+    state.vfxs.push({
+        type: 'text', el: dmgEl,
+        x: entity.x + (Math.random() - 0.5) * 40,
+        y: entity.y - (damageType.endsWith('_dot') ? 25 : 0),
+        vy: damageType.endsWith('_dot') ? -45 : -60,
+        life: damageType.endsWith('_dot') ? 0.9 : 1.2
+    });
 
-    // 3. HIỆU ỨNG MÁU VĂNG (Crit văng nhiều máu hơn)
-    const pCount = isCrit ? 15 : 5;
-    for (let i = 0; i < pCount; i++) {
-        state.vfxs.push({ type: 'particle', x: entity.x, y: entity.y, vx: Math.cos(Math.random() * 6.28) * (Math.random() * 200 + 50), vy: Math.sin(Math.random() * 6.28) * (Math.random() * 200 + 50), life: 0.5, color: '#ff0000' });
-    }
-
-    // 4. LOGIC QUÁI CHẾT & RỚT ĐỒ (Giữ nguyên)
+    // 4. XỬ LÝ QUÁI CHẾT (Giữ nguyên logic cũ đã vận hành tốt)
     if (entity.hp <= 0) {
         if (entity === state.boss) {
-            // VÒNG LẶP RỚT ĐỒ THEO CONFIG CỦA BOSS THƯỜNG
             if (entity.drops) {
                 entity.drops.forEach(drop => {
                     if (Math.random() <= drop.rate) {
                         const itemData = Object.values(ITEMS).find(i => i.id === drop.id);
                         if (itemData) {
-                            for (let i = 0; i < drop.count; i++) addItemToInventory(itemData);
-                            // Rớt chữ tím cực xịn
-                            const dropEl = ui.createDmgText(`+${drop.count} ${itemData.name}`, "#ff33ff", document.getElementById('damage-container'));
-                            state.vfxs.push({ type: 'text', el: dropEl, x: entity.x + (Math.random() - 0.5) * 100, y: entity.y + (Math.random() - 0.5) * 100, vy: -50, life: 3.0 });
+                            state.droppedItems.push({
+                                x: entity.x + (Math.random() - 0.5) * 120, y: entity.y + (Math.random() - 0.5) * 120,
+                                item: itemData, count: drop.count
+                            });
                         }
                     }
                 });
                 state.player.exp += entity.xp || 0; checkLevelUp();
                 state.player.souls += 100;
             }
-
+            state.bossReturnPortal = { x: entity.x, y: entity.y };
             state.boss = null;
-            state.isVictory = true;
-            ui.toggleScreen('victory-screen', true);
         } else if (state.enemies.includes(entity)) {
             state.xpOrbs.push({ x: entity.x, y: entity.y, value: Math.ceil(entity.maxHp * XP_ORB_CONFIG.xpPerEnemyHp), vx: (Math.random() - 0.5) * 100, vy: (Math.random() - 0.5) * 100 });
-            state.enemies = state.enemies.filter(en => en !== entity);
-
+            state.enemies = state.enemies.filter(e => e !== entity);
             state.kills++;
             state.player.souls += Math.floor(Math.random() * 3) + 1;
-
-            // --- THÊM LOGIC RỚT LINH THẠCH ---
-            // Số lượng ngẫu nhiên dựa vào Max HP của quái (Quái càng trâu, rớt càng nhiều)
             const safeMaxHp = entity.maxHp || entity.hp || 10;
             const gemDrop = Math.floor(Math.random() * (safeMaxHp / 5)) + 5;
             state.player.gem += gemDrop;
-
-            // Hiệu ứng chữ Linh Thạch bay lên (Màu xanh dương Cyan)
             const ltEl = document.createElement('div');
-            ltEl.style.position = 'absolute';
-            ltEl.style.color = '#00ffff';
-            ltEl.style.fontWeight = 'bold';
-            ltEl.style.fontSize = '18px';
-            ltEl.style.textShadow = '0 0 5px #00ffff, 1px 1px 2px black';
-            ltEl.style.pointerEvents = 'none';
-            ltEl.innerText = `💎 +${gemDrop}`;
+            ltEl.style.position = 'absolute'; ltEl.style.color = '#00ffff'; ltEl.style.fontWeight = 'bold'; ltEl.style.fontSize = '18px'; ltEl.style.textShadow = '0 0 5px #00ffff, 1px 1px 2px black'; ltEl.style.pointerEvents = 'none'; ltEl.innerText = `💎 +${gemDrop}`;
             document.getElementById('damage-container').appendChild(ltEl);
-
-            // Bay lệch sang phải một chút để không đè lên text rớt Trang Bị
             state.vfxs.push({ type: 'text', el: ltEl, x: entity.x + 20, y: entity.y - 20, vy: -50, life: 1.2 });
-
-            // Gọi update UI nếu đang mở túi đồ
             if (state.isInventoryOpen) window.updateInventoryUI();
-
             if (entity.drop && Math.random() < entity.dropRate) {
                 addItemToInventory(entity.drop);
                 const dropEl = document.createElement('div');
-                dropEl.style.position = 'absolute';
-                dropEl.style.color = '#55ff55';
-                dropEl.style.fontWeight = 'bold';
-                dropEl.style.fontSize = '18px';
-                dropEl.style.textShadow = '1px 1px 3px black';
-                dropEl.style.pointerEvents = 'none';
-                dropEl.innerText = `+1 ${entity.drop.name}`;
-
+                dropEl.style.position = 'absolute'; dropEl.style.color = '#55ff55'; dropEl.style.fontWeight = 'bold'; dropEl.style.fontSize = '18px'; dropEl.style.textShadow = '1px 1px 3px black'; dropEl.style.pointerEvents = 'none'; dropEl.innerText = `+1 ${entity.drop.name}`;
                 document.getElementById('damage-container').appendChild(dropEl);
                 state.vfxs.push({ type: 'text', el: dropEl, x: entity.x, y: entity.y - 30, vy: -40, life: 1.5 });
             }
         } else if (state.mountains.includes(entity)) {
             state.mountains = state.mountains.filter(m => m !== entity);
         }
-
     }
 }
 
@@ -502,6 +640,77 @@ function takePlayerDamage(amount) {
         ui.toggleScreen('game-over-screen', true);
     }
 }
+
+// =========================================================
+// CORE EFFECT SYSTEM - QUẢN LÝ TRẠNG THÁI TOÀN THỰC THỂ
+// =========================================================
+window.updateEntityStatusEffects = (entity, dt) => {
+    if (!entity || !entity.effects || entity.hp <= 0) return;
+
+    for (let effectKey in entity.effects) {
+        const effect = entity.effects[effectKey];
+
+        switch (effectKey) {
+            case 'poison':
+                effect.timer += dt;
+                if (effect.timer >= 0.5) {
+                    effect.timer -= 0.5;
+                    effect.ticksLeft--;
+
+                    // ĐÃ FIX: Gửi định danh rõ ràng 'poison_dot'
+                    applyDamage(entity, effect.damagePerTick, false, 'poison_dot');
+
+                    if (effect.ticksLeft <= 0 || entity.hp <= 0) {
+                        delete entity.effects.poison;
+                    }
+                }
+                break;
+
+            case 'ice':
+                if (effect.explodeTimer < 0) {
+                    effect.durationLeft -= dt;
+                    if (effect.durationLeft <= 0) {
+                        delete entity.effects.ice;
+                        break;
+                    }
+                }
+
+                if (effect.explodeTimer > 0) {
+                    effect.explodeTimer -= dt;
+                    if (effect.explodeTimer <= 0) {
+                        const explodeDmg = Math.floor(effect.baseDamageRef * 0.75);
+
+                        applyDamage(entity, explodeDmg, false, 'ice_explode');
+                        // state.vfxs.push({
+                        //     type: 'circle', color: 'rgba(0, 212, 255, 0.5)',
+                        //     x: entity.x, y: entity.y, radius: 70, life: 0.3, maxLife: 0.3
+                        // });
+
+                        delete entity.effects.ice;
+                    }
+                }
+                break;
+            
+            case 'bleed':
+                // 1. Đếm ngược 3 giây sinh tồn, nếu quá thời gian không dính sát thương sẽ mất sạch stack
+                effect.durationLeft -= dt;
+                if (effect.durationLeft <= 0) {
+                    delete entity.effects.bleed; 
+                    break;
+                }
+
+                // 2. Cứ mỗi 0.5 giây rút máu một lần (Tối đa 6 lần tương đương 3s nếu không bị reset)
+                effect.timer += dt;
+                if (effect.timer >= 0.5) {
+                    effect.timer -= 0.5;
+                    
+                    // Thực hiện rút máu, truyền định danh dạng 'bleed_dot'
+                    applyDamage(entity, effect.damagePerTick, false, 'bleed_dot');
+                }
+                break;
+        }
+    }
+};
 
 function spawnDungeonEnemy() {
     if (state.boss) return;
@@ -712,6 +921,9 @@ window.clearMapState = () => {
     state.mapEnv.herbs = [];
     state.mapEnv.ores = [];
 
+    state.droppedItems = [];
+    state.bossReturnPortal = null;
+
     const tutorialEl = document.getElementById('boss-goal-tutorial');
     if (tutorialEl) tutorialEl.style.display = 'none';
     const bossPortalEl = document.getElementById('boss-portal-el');
@@ -792,7 +1004,6 @@ function update(dt) {
     if (farmMaps.includes(state.currentMap)) {
         const mapConfig = MAP_CONFIG[state.currentMap];
 
-        // Chặn Player không cho vượt qua hàng rào (dùng 1560 vì mapLimit = 1600)
         const LIMIT = 1560;
         p.x = Math.max(-LIMIT, Math.min(LIMIT, p.x));
         p.y = Math.max(-LIMIT, Math.min(LIMIT, p.y));
@@ -802,7 +1013,7 @@ function update(dt) {
 
         const distPortal = Math.hypot(p.x - state.mapEnv.portal.x, p.y - state.mapEnv.portal.y);
 
-        if (state.canEnterPortal) {
+        if (state.canEnterPortal && !state.isInBossMap) {
             promptEl.innerText = "BẤM [E] ĐỂ VÀO ĐỘNG PHỦ YÊU VƯƠNG"; canInteract = true;
         } else if (state.isMining) {
             promptEl.innerText = "BẤM [E] ĐỂ HỦY ĐÀO"; canInteract = true;
@@ -813,17 +1024,39 @@ function update(dt) {
                 state.isMining = false;
             }
         }
-        else if (distPortal < 80) {
+        else if (distPortal < 80 && !state.isInBossMap) {
             promptEl.innerText = "BẤM [E] ĐỂ VỀ LÀNG"; canInteract = true;
         }
         else {
-            const closeHerb = state.mapEnv.herbs.find(h => Math.hypot(p.x - h.x, p.y - h.y) < 60);
-            const closeOre = state.mapEnv.ores.find(o => Math.hypot(p.x - o.x, p.y - o.y) < 60);
-            if (closeHerb) { promptEl.innerText = `BẤM [E] ĐỂ HÁI ${mapConfig.herb.item.name.toUpperCase()}`; canInteract = true; }
-            else if (closeOre) { promptEl.innerText = `BẤM [E] ĐỂ ĐÀO ${mapConfig.ore.item.name.toUpperCase()}`; canInteract = true; }
+            // -------------------------------------------------------------
+            // THÊM: ƯU TIÊN CHECK HIỂN THỊ CHỮ NHẶT ĐỒ BOSS HOẶC PORTAL BOSS TRƯỚC
+            // -------------------------------------------------------------
+            let closeDroppedItem = null;
+            if (state.droppedItems) {
+                closeDroppedItem = state.droppedItems.find(item => Math.hypot(p.x - item.x, p.y - item.y) < 70);
+            }
+
+            let closeReturnPortal = false;
+            if (state.bossReturnPortal) {
+                closeReturnPortal = Math.hypot(p.x - state.bossReturnPortal.x, p.y - state.bossReturnPortal.y) < 80;
+            }
+
+            if (closeDroppedItem) {
+                // Hiện tên vật phẩm kèm số lượng cụ thể khi player đứng gần
+                promptEl.innerText = `BẤM [E] ĐỂ NHẶT ${closeDroppedItem.item.name.toUpperCase()} X${closeDroppedItem.count}`;
+                canInteract = true;
+            } else if (closeReturnPortal) {
+                promptEl.innerText = "BẤM [E] ĐỂ BƯỚC VÀO CỔNG - QUAY VỀ LÀNG";
+                canInteract = true;
+            } else {
+                // Nếu không có đồ boss thì hiện hái thảo dược/đào đá như cũ
+                const closeHerb = state.mapEnv.herbs.find(h => Math.hypot(p.x - h.x, p.y - h.y) < 60);
+                const closeOre = state.mapEnv.ores.find(o => Math.hypot(p.x - o.x, p.y - o.y) < 60);
+                if (closeHerb) { promptEl.innerText = `BẤM [E] ĐỂ HÁI ${mapConfig.herb.item.name.toUpperCase()}`; canInteract = true; }
+                else if (closeOre) { promptEl.innerText = `BẤM [E] ĐỂ ĐÀO ${mapConfig.ore.item.name.toUpperCase()}`; canInteract = true; }
+            }
         }
         promptEl.style.display = canInteract ? 'block' : 'none';
-
     }
 
     // ========================================================
@@ -977,6 +1210,13 @@ function update(dt) {
         for (let k in state.cd) { if (state.cd[k] > 0) { state.cd[k] -= dt; if (state.cd[k] <= 0) state.cd[k] = 0; if (state.selectedClass) ui.updateCd(k, state.cd[k], getSkillCd(k)); } }
 
         state.enemies.forEach(e => {
+            window.updateEntityStatusEffects(e, dt);
+
+            let currentSpeed = e.speed;
+            if (e.effects && e.effects.ice) {
+                currentSpeed = e.speed * 0.75; // Làm chậm đi 25% tốc chạy
+            }
+
             const ang = Math.atan2(p.y - e.y, p.x - e.x); e.x += Math.cos(ang) * e.speed * dt; e.y += Math.sin(ang) * e.speed * dt;
             if (e.isTossed > 0) e.isTossed -= dt;
             if (Math.hypot(p.x - e.x, p.y - e.y) < 30 + e.size / 2) takePlayerDamage(e.damage);
@@ -984,6 +1224,8 @@ function update(dt) {
 
         if (state.boss) {
             const b = state.boss;
+            window.updateEntityStatusEffects(b, dt);
+
             ui.setElementDisplay('boss-ui', 'flex');
             document.getElementById('boss-name').innerText = b.name || "MA TÔN";
             document.getElementById('boss-hp-fill').style.width = (b.hp / b.maxHp * 100) + '%';
@@ -1514,7 +1756,7 @@ window.closeWeaponSelection = () => {
 
 // 2. Hàm mở Popup và Render danh sách vũ khí
 window.openWeaponSelectionPanel = () => {
-    state.isPaused = true; // Tạm dừng game
+    state.isPaused = true;
     const panel = document.getElementById('weapon-selection-panel');
     const list = document.getElementById('weapon-selection-list');
 
@@ -1524,24 +1766,45 @@ window.openWeaponSelectionPanel = () => {
     const branches = WEAPON_BRANCHES[state.selectedClass];
     if (!branches) return;
 
+    // Bộ từ điển để map hiệu ứng trực quan cho người chơi
+    const effectDescriptions = {
+        'poison': `<span style="color: #33ff55; font-weight: bold;">☠️ Kịch Độc:</span> Đòn đánh trúng gây 40% sát thương tức thời, 60% còn lại chuyển thành kịch độc rút máu trong 6 ticks (3 giây).`,
+        'blood': `<span style="color: #ff3333; font-weight: bold;">🩸 Huyết Tế:</span> Đòn đánh để lại vết thương sâu gây Chảy Máu liên tục, dồn sát thương mạnh lên mục tiêu trâu bò.`,
+        'ice': `<span style="color: #00ffff; font-weight: bold;">❄️ Hàn Khí:</span> Tỏa hàn băng làm giảm tốc độ di chuyển của địch và có tỷ lệ đóng băng cứng mục tiêu.`,
+        'sea': `<span style="color: #00aaff; font-weight: bold;">🌊 Thủy Triều:</span> Chuyển hóa sát thương gây ra thành Sinh Lực hồi phục lại cho bản thân (Hút máu).`,
+        'sand': `<span style="color: #ffaa00; font-weight: bold;">🧱 Thái Sơn:</span> Đòn đánh mang sức nặng vạn cân gây Sát thương thuần (Pure DMG) và đánh văng đẩy lùi mục tiêu.`
+    };
+
     for (let key in branches) {
         const b = branches[key];
         const t1 = b.tiers[0];
         const card = document.createElement('div');
-        // Style cho từng Card vũ khí
-        card.style = "flex: 1; background: #1a1a1a; border: 1px solid #333; padding: 20px; border-radius: 12px; text-align: center; transition: 0.3s;";
+
+        card.style = "flex: 1; background: #1a1a1a; border: 1px solid #333; padding: 25px 20px; border-radius: 12px; text-align: center; transition: 0.3s; display: flex; flex-direction: column; align-items: center; min-height: 340px; box-sizing: border-box;";
+
+        // Lấy mô tả hiệu ứng tương ứng hoặc fallback nếu chưa define cho bow
+        const effectHtml = effectDescriptions[key] || `<span style="color: #fff;">🔮 Chưa kích hoạt hiệu ứng đặc biệt.</span>`;
+
         card.innerHTML = `
-            <div style="height: 100px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
-                <img src="assets/icon/weapon/${state.selectedClass}/${b.id}.png" style="width: 80px; height: 80px; object-fit: contain; filter: drop-shadow(0 0 10px ${t1.color}55);">
+            <div style="height: 80px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px;">
+                <img src="assets/icon/weapon/${state.selectedClass}/${b.id}.png" style="width: 70px; height: 70px; object-fit: contain; filter: drop-shadow(0 0 10px ${t1.color}55);">
             </div>
-            <h3 style="color: ${t1.color}; margin-bottom: 10px;">${b.name}</h3>
-            <div style="font-size: 11px; color: #888; height: 40px; margin-bottom: 10px;">${b.desc}</div>
-            <div style="background: #000; padding: 8px; border-radius: 6px; text-align: left; font-size: 12px; margin-bottom: 10px;">
-                <span style="color: #ff5555;">⚔️ Công: +${t1.stats.attack}</span><br>
-                <span style="color: #55ff55;">❤️ Máu: +${t1.stats.maxHp}</span>
+            
+            <h3 style="color: ${t1.color}; margin-top: 0; margin-bottom: 10px; font-size: 18px; font-weight: bold;">${b.name}</h3>
+            
+            <div style="font-size: 11px; color: #888; line-height: 1.5; margin-bottom: 15px; text-align: center; font-style: italic;">
+                "${b.desc}"
             </div>
-            <button class="btn" style="width: 100%; border-color: ${t1.color}; color: ${t1.color};" 
-                onclick="window.confirmWeaponBranch('${key}')">CHỌN NHÁNH</button>
+
+            <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,170,0,0.1); padding: 10px; border-radius: 6px; text-align: left; font-size: 12px; line-height: 1.5; margin-bottom: 15px; width: 100%; box-sizing: border-box;">
+                <div style="color: #ffaa00; font-weight: bold; font-size: 11px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; text-align: center">Hiệu Ứng Bản Mệnh</div>
+                ${effectHtml}
+            </div>
+            
+            <button class="btn" style="width: 100%; border-color: ${t1.color}; color: ${t1.color}; margin-top: auto; padding: 8px 0; font-weight: bold; font-size: 13px;" 
+                onclick="window.confirmWeaponBranch('${key}')">
+                CHỌN NHÁNH
+            </button>
         `;
         list.appendChild(card);
     }
