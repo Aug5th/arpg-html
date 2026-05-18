@@ -14,6 +14,7 @@ import {
 import { InputManager } from './systems/InputManager.js';
 import { UIManager } from './systems/UIManager.js';
 import { Renderer } from './utils/Renderer.js';
+import { worldToIso, isoToWorld } from './utils/MathHelper.js';
 
 // Init Systems
 const canvas = document.getElementById('gameCanvas');
@@ -335,7 +336,13 @@ input.onKeyDownAction = (k) => {
     const p = state.player;
     if (k === ' ' && state.cd.dash <= 0 && !p.isDashing) {
         p.isDashing = true; p.dashTime = 0.2;
-        let dx = 0, dy = 0; if (input.keys.w) dy -= 1; if (input.keys.s) dy += 1; if (input.keys.a) dx -= 1; if (input.keys.d) dx += 1;
+
+        let dx = 0, dy = 0;
+        if (input.keys.w) { dx -= 1; dy -= 1; }
+        if (input.keys.s) { dx += 1; dy += 1; }
+        if (input.keys.a) { dx -= 1; dy += 1; }
+        if (input.keys.d) { dx += 1; dy -= 1; }
+
         if (dx === 0 && dy === 0) { dx = Math.cos(p.angle); dy = Math.sin(p.angle); }
         const len = Math.hypot(dx, dy); p.dashDir = { x: dx / len, y: dy / len };
         p.iFrames = 0.3; state.cd.dash = getSkillCd('dash');
@@ -343,13 +350,21 @@ input.onKeyDownAction = (k) => {
 
     if (k === '1' && state.cd.s1 <= 0) {
         const dmg = getSkillDmg('s1');
+
+        // Thuật toán Raycast lấy tọa độ thế giới thực từ vị trí trỏ chuột trên màn hình
+        const playerIsoPos = worldToIso(p.x, p.y);
+        const mouseIsoX = input.mouseX - (window.innerWidth / 2) + playerIsoPos.x;
+        const mouseIsoY = input.mouseY - (window.innerHeight / 2) + playerIsoPos.y;
+        const mouseWorld = isoToWorld(mouseIsoX, mouseIsoY);
+
         if (state.selectedClass === 'sword') {
             const w = 150, h = 300, cx = p.x + Math.cos(p.angle) * (h / 2 + 20), cy = p.y + Math.sin(p.angle) * (h / 2 + 20);
             state.vfxs.push({ x: cx, y: cy, w: h, h: w, angle: p.angle, life: 0.4, maxLife: 0.4, type: 'rect', color: '#ffaa00' });
             checkRectDamage(cx, cy, p.angle, h, w, dmg);
         } else {
-            state.arrowRains.push({ x: input.mouseX + state.camX, y: input.mouseY + state.camY, life: 3.0, radius: 150, tick: 0, dmg: dmg });
-            state.vfxs.push({ x: input.mouseX + state.camX, y: input.mouseY + state.camY, radius: 150, life: 3.0, maxLife: 3.0, type: 'circle', color: 'rgba(50,255,100,0.2)' });
+            // Sử dụng mouseWorld thay vì tọa độ phẳng cũ
+            state.arrowRains.push({ x: mouseWorld.x, y: mouseWorld.y, life: 3.0, radius: 150, tick: 0, dmg: dmg });
+            state.vfxs.push({ x: mouseWorld.x, y: mouseWorld.y, radius: 150, life: 3.0, maxLife: 3.0, type: 'circle', color: 'rgba(50,255,100,0.2)' });
         }
         state.cd.s1 = getSkillCd('s1');
     }
@@ -427,14 +442,14 @@ function checkRectDamage(cx, cy, ang, len, wid, dmg) {
 
 function applyDamage(entity, baseDmg, isCritOverride = null, damageType = 'normal') {
     let isCrit = false;
-    
+
     // 1. XỬ LÝ CRIT (Chỉ đòn đánh thường mới roll Crit, sát thương DoT/Nổ không roll lại)
     if (isCritOverride !== null) {
         isCrit = isCritOverride;
     } else if (damageType === 'normal') {
         const critChance = (state.player.crit || 0) / 100;
         if (Math.random() < critChance) {
-            baseDmg = baseDmg * 2; 
+            baseDmg = baseDmg * 2;
             isCrit = true;
         }
     }
@@ -443,7 +458,7 @@ function applyDamage(entity, baseDmg, isCritOverride = null, damageType = 'norma
     // 2. XỬ LÝ HIỆU ỨNG NHÁNH VŨ KHÍ (Chỉ kích hoạt khi đánh thường 'normal')
     const isEnemyTarget = (state.enemies.includes(entity) || (state.boss && entity === state.boss));
     if (damageType === 'normal' && isEnemyTarget) {
-        
+
         // ========================================================
         // ĐÃ BUFF CHỈ SỐ: NHÁNH KỊCH ĐỘC (POISON) -> TỔNG 170% DAMAGE
         // ========================================================
@@ -463,8 +478,8 @@ function applyDamage(entity, baseDmg, isCritOverride = null, damageType = 'norma
                 damagePerTick: Math.max(1, damagePerTick) // Đảm bảo tối thiểu rút 1 máu
             };
             damageType = 'poison_hit'; // Đổi type để phục vụ UI đòn đánh gốc độc
-        } 
-        
+        }
+
         // --- Nhánh Băng (Giữ nguyên logic cũ) ---
         else if (state.player.weaponBranch === 'ice') {
             if (!entity.effects) entity.effects = {};
@@ -481,7 +496,7 @@ function applyDamage(entity, baseDmg, isCritOverride = null, damageType = 'norma
                 }
             }
         }
-        
+
         // --- Nhánh Máu (Giữ nguyên logic cũ) ---
         else if (state.player.weaponBranch === 'blood') {
             if (!entity.effects) entity.effects = {};
@@ -500,14 +515,14 @@ function applyDamage(entity, baseDmg, isCritOverride = null, damageType = 'norma
             let bleed = entity.effects.bleed;
             bleed.stacks = Math.min(6, bleed.stacks + 1);
             bleed.durationLeft = 3.0;
-            bleed.timer = 0; 
+            bleed.timer = 0;
             bleed.baseDamageRef = originalDmg;
 
             if (bleed.stacks === 6) {
-                const explodeDmg = bleed.baseDamageRef; 
+                const explodeDmg = bleed.baseDamageRef;
                 delete entity.effects.bleed;
                 applyDamage(entity, explodeDmg, false, 'bleed_explode');
-                
+
                 state.vfxs.push({
                     type: 'circle', color: 'rgba(255, 0, 50, 0.6)',
                     x: entity.x, y: entity.y, radius: 65, life: 0.2, maxLife: 0.2
@@ -523,15 +538,15 @@ function applyDamage(entity, baseDmg, isCritOverride = null, damageType = 'norma
     entity.hp -= finalDmg;
 
     // 3. PHÂN PHỐI MÀU SẮC THEO HỆ SÁT THƯƠNG
-    let color = '#ffcc00'; 
-    if (isCrit) color = '#ff3333'; 
+    let color = '#ffcc00';
+    if (isCrit) color = '#ff3333';
 
     if (damageType === 'poison_dot') {
-        color = isCrit ? '#76ff03' : '#33ff55'; 
+        color = isCrit ? '#76ff03' : '#33ff55';
     } else if (damageType === 'ice_explode') {
-        color = '#00d4ff'; 
+        color = '#00d4ff';
     } else if (damageType === 'bleed_dot' || damageType === 'bleed_explode') {
-        color = '#ff1111'; 
+        color = '#ff1111';
     }
 
     // Đẩy sát thương gốc dạng Số thuần túy vào UI
@@ -546,26 +561,26 @@ function applyDamage(entity, baseDmg, isCritOverride = null, damageType = 'norma
         dmgEl.style.fontSize = '18px';
         dmgEl.style.fontWeight = 'bold';
         dmgEl.style.textShadow = '0 0 6px #33ff55, 1px 1px 2px black';
-    } 
+    }
     else if (damageType === 'bleed_dot') {
         // CHỈ HIỂN THỊ GIỌT MÁU VÀ SỐ DAMAGE (KHÔNG DẤU +, KHÔNG CHỮ THỪA)
         dmgEl.innerText = `🩸 ${finalDmg}`;
         dmgEl.style.fontSize = '18px';
         dmgEl.style.fontWeight = 'bold';
         dmgEl.style.textShadow = '0 0 6px #ff1111, 1px 1px 2px black';
-    } 
+    }
     else if (damageType === 'ice_explode') {
         dmgEl.innerText = `❄️💥 ${finalDmg}`;
         dmgEl.style.fontSize = '28px';
         dmgEl.style.fontWeight = 'bold';
         dmgEl.style.textShadow = '0 0 12px #00d4ff, 1px 1px 3px black';
-    } 
+    }
     else if (damageType === 'bleed_explode') {
         dmgEl.innerText = `🩸💥 ${finalDmg}`;
         dmgEl.style.fontSize = '32px';
         dmgEl.style.fontWeight = '900';
         dmgEl.style.textShadow = '0 0 15px #ff0000, 1px 1px 4px black';
-    } 
+    }
     else {
         if (isCrit) {
             dmgEl.innerText = `💥${finalDmg}`;
@@ -690,12 +705,12 @@ window.updateEntityStatusEffects = (entity, dt) => {
                     }
                 }
                 break;
-            
+
             case 'bleed':
                 // 1. Đếm ngược 3 giây sinh tồn, nếu quá thời gian không dính sát thương sẽ mất sạch stack
                 effect.durationLeft -= dt;
                 if (effect.durationLeft <= 0) {
-                    delete entity.effects.bleed; 
+                    delete entity.effects.bleed;
                     break;
                 }
 
@@ -703,7 +718,7 @@ window.updateEntityStatusEffects = (entity, dt) => {
                 effect.timer += dt;
                 if (effect.timer >= 0.5) {
                     effect.timer -= 0.5;
-                    
+
                     // Thực hiện rút máu, truyền định danh dạng 'bleed_dot'
                     applyDamage(entity, effect.damagePerTick, false, 'bleed_dot');
                 }
@@ -935,7 +950,16 @@ function update(dt) {
     if (state.isDead || state.isVictory) return;
 
     const p = state.player;
-    p.angle = Math.atan2(input.mouseY + state.camY - p.y, input.mouseX + state.camX - p.x);
+
+    const playerIsoPos = worldToIso(p.x, p.y);
+    // 1. Tính toán tọa độ Isometric thực tế của chuột trên Canvas
+    const mouseIsoX = input.mouseX - (canvas.width / 2) + playerIsoPos.x;
+    const mouseIsoY = input.mouseY - (canvas.height / 2) + playerIsoPos.y;
+    // 2. Chuyển đổi ngược từ tọa độ chuột Isometric sang tọa độ Thế giới thực phẳng 2D
+    const mouseWorld = isoToWorld(mouseIsoX, mouseIsoY);
+    // 3. Tính góc quay nhân vật chính xác tuyệt đối theo trục 2D Logic gốc
+    p.angle = Math.atan2(mouseWorld.y - p.y, mouseWorld.x - p.x);
+
     if (p.iFrames > 0) p.iFrames -= dt;
     handleActions(dt);
 
@@ -945,14 +969,10 @@ function update(dt) {
     } else {
         let dx = 0, dy = 0;
 
-        if (input.keys.w)
-            dy -= 1;
-        if (input.keys.s)
-            dy += 1;
-        if (input.keys.a)
-            dx -= 1;
-        if (input.keys.d)
-            dx += 1;
+        if (input.keys.w) { dx -= 1; dy -= 1; } // W: Đi thẳng LÊN trên màn hình
+        if (input.keys.s) { dx += 1; dy += 1; } // S: Đi thẳng XUỐNG dưới màn hình
+        if (input.keys.a) { dx -= 1; dy += 1; } // A: Đi thẳng sang TRÁI màn hình
+        if (input.keys.d) { dx += 1; dy -= 1; } // D: Đi thẳng sang PHẢI màn hình
 
         if (state.isMining) {
             dx = 0;
@@ -1146,8 +1166,11 @@ function update(dt) {
             }
             bossPortalEl.style.display = 'block';
             // Tính toán vị trí Render chuẩn xác so với Camera
-            bossPortalEl.style.left = (state.portalPos.x - state.camX - 30) + 'px';
-            bossPortalEl.style.top = (state.portalPos.y - state.camY - 30) + 'px';
+            const portalIso = worldToIso(state.portalPos.x, state.portalPos.y);
+            const playerIso = worldToIso(state.player.x, state.player.y);
+
+            bossPortalEl.style.left = (portalIso.x - playerIso.x + window.innerWidth / 2 - 30) + 'px';
+            bossPortalEl.style.top = (portalIso.y - playerIso.y + window.innerHeight / 2 - 30) + 'px';
 
             // Tính toán khoảng cách để hiện nút [E]
             const dist = Math.hypot(p.x - state.portalPos.x, p.y - state.portalPos.y);
@@ -1304,7 +1327,28 @@ function update(dt) {
             s.life = state.cd.s3; if (s.life <= 0) state.flyingSwords.splice(i, 1);
         }
 
-        for (let i = state.vfxs.length - 1; i >= 0; i--) { let v = state.vfxs[i]; v.life -= dt; if (v.type === 'text') { v.y += v.vy * dt; v.el.style.left = (v.x - state.camX) + 'px'; v.el.style.top = (v.y - state.camY) + 'px'; v.el.style.opacity = v.life; } if (v.type === 'particle') { v.x += v.vx * dt; v.y += v.vy * dt; v.vx *= 0.9; v.vy *= 0.9; } if (v.life <= 0) { if (v.el) v.el.remove(); state.vfxs.splice(i, 1); } }
+        for (let i = state.vfxs.length - 1; i >= 0; i--) {
+            let v = state.vfxs[i];
+            v.life -= dt;
+            if (v.type === 'text') {
+                v.y += v.vy * dt;
+                const textIso = worldToIso(v.x, v.y);
+                const camIso = worldToIso(state.player.x, state.player.y);
+                v.el.style.left = (textIso.x - camIso.x + window.innerWidth / 2) + 'px';
+                v.el.style.top = (textIso.y - camIso.y + window.innerHeight / 2) + 'px';
+                v.el.style.opacity = v.life;
+            }
+            if (v.type === 'particle') {
+                v.x += v.vx * dt;
+                v.y += v.vy * dt;
+                v.vx *= 0.9;
+                v.vy *= 0.9;
+            }
+            if (v.life <= 0) {
+                if (v.el) v.el.remove();
+                state.vfxs.splice(i, 1);
+            }
+        }
     }
 }
 
