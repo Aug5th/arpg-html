@@ -13,6 +13,7 @@ import {
 } from './data/GameData.js';
 import { InputManager } from './systems/InputManager.js';
 import { UIManager } from './systems/UIManager.js';
+import { BattleManager } from './systems/BattleManager.js';
 import { Renderer } from './utils/Renderer.js';
 import { worldToIso, isoToWorld } from './utils/MathHelper.js';
 
@@ -20,10 +21,6 @@ import { worldToIso, isoToWorld } from './utils/MathHelper.js';
 const canvas = document.getElementById('gameCanvas');
 const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
 window.addEventListener('resize', resize); resize();
-
-const input = new InputManager();
-const ui = new UIManager();
-const renderer = new Renderer(canvas);
 
 const SAVE_KEY = 'tu_tien_lo_local_saves';
 
@@ -73,6 +70,10 @@ const state = {
     bossReturnPortal: null
 };
 
+const input = new InputManager();
+const ui = new UIManager();
+const renderer = new Renderer(canvas);
+const battle = new BattleManager(state, ui);
 
 // =========================================================
 // HỆ THỐNG ĐAN DƯỢC (ALCHEMY RECIPES)
@@ -349,7 +350,7 @@ input.onKeyDownAction = (k) => {
     }
 
     if (k === '1' && state.cd.s1 <= 0) {
-        const dmg = getSkillDmg('s1');
+        const dmg = battle.getSkillDmg('s1');
 
         // Thuật toán Raycast lấy tọa độ thế giới thực từ vị trí trỏ chuột trên màn hình
         const playerIsoPos = worldToIso(p.x, p.y);
@@ -360,25 +361,25 @@ input.onKeyDownAction = (k) => {
         if (state.selectedClass === 'sword') {
             const w = 150, h = 300, cx = p.x + Math.cos(p.angle) * (h / 2 + 20), cy = p.y + Math.sin(p.angle) * (h / 2 + 20);
             state.vfxs.push({ x: cx, y: cy, w: h, h: w, angle: p.angle, life: 0.4, maxLife: 0.4, type: 'rect', color: '#ffaa00' });
-            checkRectDamage(cx, cy, p.angle, h, w, dmg);
+            battle.checkRectDamage(cx, cy, p.angle, h, w, dmg);
         } else {
             // Sử dụng mouseWorld thay vì tọa độ phẳng cũ
             state.arrowRains.push({ x: mouseWorld.x, y: mouseWorld.y, life: 3.0, radius: 150, tick: 0, dmg: dmg });
             state.vfxs.push({ x: mouseWorld.x, y: mouseWorld.y, radius: 150, life: 3.0, maxLife: 3.0, type: 'circle', color: 'rgba(50,255,100,0.2)' });
         }
-        state.cd.s1 = getSkillCd('s1');
+        state.cd.s1 = battle.getSkillCd('s1');
     }
 
     if (k === '2' && state.cd.s2 <= 0) {
         if (state.selectedClass === 'sword') { p.pendingSlashes = 3; p.slashTimer = 0; }
         else state.projectiles.push({ x: p.x, y: p.y, vx: Math.cos(p.angle) * 1200, vy: Math.sin(p.angle) * 1200, life: 2.0, type: 'bigarrow', dmg: getSkillDmg('s2'), pierce: true });
-        state.cd.s2 = getSkillCd('s2');
+        state.cd.s2 = battle.getSkillCd('s2');
     }
 
     if (k === '3' && state.cd.s3 <= 0) {
         if (state.selectedClass === 'sword') for (let i = 0; i < 4; i++) state.flyingSwords.push({ angleOffset: i * Math.PI / 2, state: 'orbit', target: null, x: p.x, y: p.y, dmg: getSkillDmg('s3') });
         else state.tornados.push({ x: p.x, y: p.y, vx: Math.cos(p.angle) * 100, vy: Math.sin(p.angle) * 100, life: 5.0, tick: 0, radius: 80, dmg: getSkillDmg('s3') });
-        state.cd.s3 = getSkillCd('s3');
+        state.cd.s3 = battle.getSkillCd('s3');
     }
 };
 
@@ -393,339 +394,8 @@ function updateMenuVisibility() {
     if (!anyMenuOpen) { state.lastTime = performance.now(); requestAnimationFrame(gameLoop); }
 }
 
-function handleActions(dt) {
-    if (!state.selectedClass || state.currentMap === 'village' || state.isMining) return;
-
-    if (input.isLmbDown && state.cd.lmb <= 0) {
-        const dmg = getSkillDmg('lmb');
-        if (state.selectedClass === 'sword') createSlash(state.player.x, state.player.y, state.player.angle, 100, Math.PI / 1.5, dmg, '#00ffff', 0.2);
-        else state.projectiles.push({ x: state.player.x + Math.cos(state.player.angle) * 20, y: state.player.y + Math.sin(state.player.angle) * 20, vx: Math.cos(state.player.angle) * 800, vy: Math.sin(state.player.angle) * 800, life: 1.5, type: 'arrow', dmg: dmg, pierce: false });
-        state.cd.lmb = getSkillCd('lmb');
-    }
-
-    if (input.isRmbDown && state.cd.rmb <= 0) {
-        const dmg = getSkillDmg('rmb');
-        if (state.selectedClass === 'sword') state.projectiles.push({ x: state.player.x, y: state.player.y, radius: 10, maxRadius: 200, expansionSpeed: 600, life: 200 / 600, type: 'expandingRing', dmg: dmg, hitList: [] });
-        else for (let i = -2; i <= 2; i++) state.projectiles.push({ x: state.player.x, y: state.player.y, vx: Math.cos(state.player.angle + i * 0.15) * 700, vy: Math.sin(state.player.angle + i * 0.15) * 700, life: 1.5, type: 'arrow', dmg: dmg, pierce: false });
-        state.cd.rmb = getSkillCd('rmb');
-    }
-}
-
 const getSkillCd = (k) => k === 'lmb' ? WEAPONS[state.selectedClass].skills[k].cd / state.player.attackSpeed : WEAPONS[state.selectedClass].skills[k].cd * BASE_STATS.cdr;
 const getSkillDmg = (k) => state.player.attack * WEAPONS[state.selectedClass].skills[k].dmgMult;
-
-function createSlash(px, py, ang, radius, arc, dmg, color, life) {
-    state.vfxs.push({ x: px, y: py, angle: ang, radius: radius, arc: arc, life: life, maxLife: life, type: 'slash', color: color });
-    checkConeDamage(px, py, ang, radius, arc, dmg);
-}
-
-function checkConeDamage(px, py, ang, radius, arc, dmg) {
-    [...state.enemies, state.boss, ...state.mountains].forEach(e => {
-        if (!e || e.hp <= 0) return;
-        const dist = Math.hypot(e.x - px, e.y - py) - (e.size || e.radius || 30) / 2;
-        if (dist <= radius) {
-            let diff = Math.abs(ang - Math.atan2(e.y - py, e.x - px));
-            if (diff > Math.PI) diff = 2 * Math.PI - diff;
-            if (arc >= 6.1 || diff <= arc / 2) applyDamage(e, dmg);
-        }
-    });
-}
-
-function checkRectDamage(cx, cy, ang, len, wid, dmg) {
-    const dx = Math.cos(ang), dy = Math.sin(ang);
-    [...state.enemies, state.boss, ...state.mountains].forEach(e => {
-        if (!e || e.hp <= 0) return;
-        const vx = e.x - cx, vy = e.y - cy;
-        if (Math.abs(vx * dx + vy * dy) <= len / 2 && Math.abs(vx * -dy + vy * dx) <= wid / 2) applyDamage(e, dmg);
-    });
-}
-
-function applyDamage(entity, baseDmg, isCritOverride = null, damageType = 'normal') {
-    let isCrit = false;
-
-    // 1. XỬ LÝ CRIT (Chỉ đòn đánh thường mới roll Crit, sát thương DoT/Nổ không roll lại)
-    if (isCritOverride !== null) {
-        isCrit = isCritOverride;
-    } else if (damageType === 'normal') {
-        const critChance = (state.player.crit || 0) / 100;
-        if (Math.random() < critChance) {
-            baseDmg = baseDmg * 2;
-            isCrit = true;
-        }
-    }
-    let finalDmg = Math.floor(baseDmg);
-
-    // 2. XỬ LÝ HIỆU ỨNG NHÁNH VŨ KHÍ (Chỉ kích hoạt khi đánh thường 'normal')
-    const isEnemyTarget = (state.enemies.includes(entity) || (state.boss && entity === state.boss));
-    if (damageType === 'normal' && isEnemyTarget) {
-
-        // ========================================================
-        // ĐÃ BUFF CHỈ SỐ: NHÁNH KỊCH ĐỘC (POISON) -> TỔNG 170% DAMAGE
-        // ========================================================
-        if (state.player.weaponBranch === 'poison') {
-            if (!entity.effects) entity.effects = {};
-            const originalDmg = finalDmg;
-
-            // Phát đánh đầu tiên gây 80% sát thương gốc
-            finalDmg = Math.round(originalDmg * 0.8);
-
-            // Mỗi tick độc rút 15% sát thương gốc (6 ticks x 15% = 90%)
-            const damagePerTick = Math.round(originalDmg * 0.15);
-
-            entity.effects.poison = {
-                ticksLeft: 6,
-                timer: 0,
-                damagePerTick: Math.max(1, damagePerTick) // Đảm bảo tối thiểu rút 1 máu
-            };
-            damageType = 'poison_hit'; // Đổi type để phục vụ UI đòn đánh gốc độc
-        }
-
-        // --- Nhánh Băng (Giữ nguyên logic cũ) ---
-        else if (state.player.weaponBranch === 'ice') {
-            if (!entity.effects) entity.effects = {};
-            if (!entity.effects.ice) {
-                entity.effects.ice = { stacks: 0, durationLeft: 5.0, explodeTimer: -1, baseDamageRef: finalDmg };
-            }
-            let ice = entity.effects.ice;
-            if (ice.explodeTimer < 0) {
-                ice.stacks = Math.min(3, ice.stacks + 1);
-                ice.durationLeft = 5.0;
-                ice.baseDamageRef = finalDmg;
-                if (ice.stacks === 3) {
-                    ice.explodeTimer = 0.5;
-                }
-            }
-        }
-
-        // --- Nhánh Máu (Giữ nguyên logic cũ) ---
-        else if (state.player.weaponBranch === 'blood') {
-            if (!entity.effects) entity.effects = {};
-            const originalDmg = finalDmg;
-
-            finalDmg = Math.round(originalDmg * 0.5); // 50% phát đầu
-            const damagePerTick = Math.round(originalDmg * 0.1); // 10% mỗi tick
-
-            if (!entity.effects.bleed) {
-                entity.effects.bleed = {
-                    stacks: 0, durationLeft: 3.0, timer: 0,
-                    damagePerTick: Math.max(1, damagePerTick), baseDamageRef: originalDmg
-                };
-            }
-
-            let bleed = entity.effects.bleed;
-            bleed.stacks = Math.min(6, bleed.stacks + 1);
-            bleed.durationLeft = 3.0;
-            bleed.timer = 0;
-            bleed.baseDamageRef = originalDmg;
-
-            if (bleed.stacks === 6) {
-                const explodeDmg = bleed.baseDamageRef;
-                delete entity.effects.bleed;
-                applyDamage(entity, explodeDmg, false, 'bleed_explode');
-
-                state.vfxs.push({
-                    type: 'circle', color: 'rgba(255, 0, 50, 0.6)',
-                    x: entity.x, y: entity.y, radius: 65, life: 0.2, maxLife: 0.2
-                });
-                return;
-            } else {
-                damageType = 'bleed_hit';
-            }
-        }
-    }
-
-    // Khấu trừ sinh mệnh thực tế của thực thể
-    entity.hp -= finalDmg;
-
-    // 3. PHÂN PHỐI MÀU SẮC THEO HỆ SÁT THƯƠNG
-    let color = '#ffcc00';
-    if (isCrit) color = '#ff3333';
-
-    if (damageType === 'poison_dot') {
-        color = isCrit ? '#76ff03' : '#33ff55';
-    } else if (damageType === 'ice_explode') {
-        color = '#00d4ff';
-    } else if (damageType === 'bleed_dot' || damageType === 'bleed_explode') {
-        color = '#ff1111';
-    }
-
-    // Đẩy sát thương gốc dạng Số thuần túy vào UI
-    const dmgEl = ui.createDmgText(finalDmg, color, document.getElementById('damage-container'));
-
-    // ========================================================
-    // ĐÃ TÁI CẤU TRÚC: ĐỊNH DẠNG TEXT HIỂN THỊ TRỰC QUAN SẠCH SẼ
-    // ========================================================
-    if (damageType === 'poison_dot') {
-        // CHỈ HIỂN THỊ ĐẦU LÂU VÀ SỐ DAMAGE (KHÔNG DẤU +, KHÔNG CHỮ THỪA)
-        dmgEl.innerText = `☠️ ${finalDmg}`;
-        dmgEl.style.fontSize = '18px';
-        dmgEl.style.fontWeight = 'bold';
-        dmgEl.style.textShadow = '0 0 6px #33ff55, 1px 1px 2px black';
-    }
-    else if (damageType === 'bleed_dot') {
-        // CHỈ HIỂN THỊ GIỌT MÁU VÀ SỐ DAMAGE (KHÔNG DẤU +, KHÔNG CHỮ THỪA)
-        dmgEl.innerText = `🩸 ${finalDmg}`;
-        dmgEl.style.fontSize = '18px';
-        dmgEl.style.fontWeight = 'bold';
-        dmgEl.style.textShadow = '0 0 6px #ff1111, 1px 1px 2px black';
-    }
-    else if (damageType === 'ice_explode') {
-        dmgEl.innerText = `❄️💥 ${finalDmg}`;
-        dmgEl.style.fontSize = '28px';
-        dmgEl.style.fontWeight = 'bold';
-        dmgEl.style.textShadow = '0 0 12px #00d4ff, 1px 1px 3px black';
-    }
-    else if (damageType === 'bleed_explode') {
-        dmgEl.innerText = `🩸💥 ${finalDmg}`;
-        dmgEl.style.fontSize = '32px';
-        dmgEl.style.fontWeight = '900';
-        dmgEl.style.textShadow = '0 0 15px #ff0000, 1px 1px 4px black';
-    }
-    else {
-        if (isCrit) {
-            dmgEl.innerText = `💥${finalDmg}`;
-            dmgEl.style.fontSize = '35px';
-            dmgEl.style.fontWeight = '900';
-            dmgEl.style.textShadow = '0 0 15px #ff0000, 2px 2px 5px black';
-            dmgEl.style.zIndex = '50';
-        }
-    }
-
-    state.vfxs.push({
-        type: 'text', el: dmgEl,
-        x: entity.x + (Math.random() - 0.5) * 40,
-        y: entity.y - (damageType.endsWith('_dot') ? 25 : 0),
-        vy: damageType.endsWith('_dot') ? -45 : -60,
-        life: damageType.endsWith('_dot') ? 0.9 : 1.2
-    });
-
-    // 4. XỬ LÝ QUÁI CHẾT (Giữ nguyên logic cũ đã vận hành tốt)
-    if (entity.hp <= 0) {
-        if (entity === state.boss) {
-            if (entity.drops) {
-                entity.drops.forEach(drop => {
-                    if (Math.random() <= drop.rate) {
-                        const itemData = Object.values(ITEMS).find(i => i.id === drop.id);
-                        if (itemData) {
-                            state.droppedItems.push({
-                                x: entity.x + (Math.random() - 0.5) * 120, y: entity.y + (Math.random() - 0.5) * 120,
-                                item: itemData, count: drop.count
-                            });
-                        }
-                    }
-                });
-                state.player.exp += entity.xp || 0; checkLevelUp();
-                state.player.souls += 100;
-            }
-            state.bossReturnPortal = { x: entity.x, y: entity.y };
-            state.boss = null;
-        } else if (state.enemies.includes(entity)) {
-            state.xpOrbs.push({ x: entity.x, y: entity.y, value: Math.ceil(entity.maxHp * XP_ORB_CONFIG.xpPerEnemyHp), vx: (Math.random() - 0.5) * 100, vy: (Math.random() - 0.5) * 100 });
-            state.enemies = state.enemies.filter(e => e !== entity);
-            state.kills++;
-            state.player.souls += Math.floor(Math.random() * 3) + 1;
-            const safeMaxHp = entity.maxHp || entity.hp || 10;
-            const gemDrop = Math.floor(Math.random() * (safeMaxHp / 5)) + 5;
-            state.player.gem += gemDrop;
-            const ltEl = document.createElement('div');
-            ltEl.style.position = 'absolute'; ltEl.style.color = '#00ffff'; ltEl.style.fontWeight = 'bold'; ltEl.style.fontSize = '18px'; ltEl.style.textShadow = '0 0 5px #00ffff, 1px 1px 2px black'; ltEl.style.pointerEvents = 'none'; ltEl.innerText = `💎 +${gemDrop}`;
-            document.getElementById('damage-container').appendChild(ltEl);
-            state.vfxs.push({ type: 'text', el: ltEl, x: entity.x + 20, y: entity.y - 20, vy: -50, life: 1.2 });
-            if (state.isInventoryOpen) window.updateInventoryUI();
-            if (entity.drop && Math.random() < entity.dropRate) {
-                addItemToInventory(entity.drop);
-                const dropEl = document.createElement('div');
-                dropEl.style.position = 'absolute'; dropEl.style.color = '#55ff55'; dropEl.style.fontWeight = 'bold'; dropEl.style.fontSize = '18px'; dropEl.style.textShadow = '1px 1px 3px black'; dropEl.style.pointerEvents = 'none'; dropEl.innerText = `+1 ${entity.drop.name}`;
-                document.getElementById('damage-container').appendChild(dropEl);
-                state.vfxs.push({ type: 'text', el: dropEl, x: entity.x, y: entity.y - 30, vy: -40, life: 1.5 });
-            }
-        } else if (state.mountains.includes(entity)) {
-            state.mountains = state.mountains.filter(m => m !== entity);
-        }
-    }
-}
-
-function takePlayerDamage(amount) {
-    if (state.player.iFrames > 0 || state.isDead || state.isVictory) return;
-    state.player.hp = Math.max(0, state.player.hp - amount); state.player.iFrames = 0.5; ui.updateHp(state.player.hp, state.player.maxHp);
-    const dmgEl = ui.createDmgText(amount, '#ff0000', document.getElementById('damage-container'));
-    state.vfxs.push({ type: 'text', el: dmgEl, x: state.player.x + (Math.random() - 0.5) * 40, y: state.player.y, vy: -50, life: 1.0 });
-    if (state.player.hp <= 0) {
-        state.isDead = true;
-        ui.toggleScreen('game-over-screen', true);
-    }
-}
-
-// =========================================================
-// CORE EFFECT SYSTEM - QUẢN LÝ TRẠNG THÁI TOÀN THỰC THỂ
-// =========================================================
-window.updateEntityStatusEffects = (entity, dt) => {
-    if (!entity || !entity.effects || entity.hp <= 0) return;
-
-    for (let effectKey in entity.effects) {
-        const effect = entity.effects[effectKey];
-
-        switch (effectKey) {
-            case 'poison':
-                effect.timer += dt;
-                if (effect.timer >= 0.5) {
-                    effect.timer -= 0.5;
-                    effect.ticksLeft--;
-
-                    // ĐÃ FIX: Gửi định danh rõ ràng 'poison_dot'
-                    applyDamage(entity, effect.damagePerTick, false, 'poison_dot');
-
-                    if (effect.ticksLeft <= 0 || entity.hp <= 0) {
-                        delete entity.effects.poison;
-                    }
-                }
-                break;
-
-            case 'ice':
-                if (effect.explodeTimer < 0) {
-                    effect.durationLeft -= dt;
-                    if (effect.durationLeft <= 0) {
-                        delete entity.effects.ice;
-                        break;
-                    }
-                }
-
-                if (effect.explodeTimer > 0) {
-                    effect.explodeTimer -= dt;
-                    if (effect.explodeTimer <= 0) {
-                        const explodeDmg = Math.floor(effect.baseDamageRef * 0.75);
-
-                        applyDamage(entity, explodeDmg, false, 'ice_explode');
-                        // state.vfxs.push({
-                        //     type: 'circle', color: 'rgba(0, 212, 255, 0.5)',
-                        //     x: entity.x, y: entity.y, radius: 70, life: 0.3, maxLife: 0.3
-                        // });
-
-                        delete entity.effects.ice;
-                    }
-                }
-                break;
-
-            case 'bleed':
-                // 1. Đếm ngược 3 giây sinh tồn, nếu quá thời gian không dính sát thương sẽ mất sạch stack
-                effect.durationLeft -= dt;
-                if (effect.durationLeft <= 0) {
-                    delete entity.effects.bleed;
-                    break;
-                }
-
-                // 2. Cứ mỗi 0.5 giây rút máu một lần (Tối đa 6 lần tương đương 3s nếu không bị reset)
-                effect.timer += dt;
-                if (effect.timer >= 0.5) {
-                    effect.timer -= 0.5;
-
-                    // Thực hiện rút máu, truyền định danh dạng 'bleed_dot'
-                    applyDamage(entity, effect.damagePerTick, false, 'bleed_dot');
-                }
-                break;
-        }
-    }
-};
 
 function spawnDungeonEnemy() {
     if (state.boss) return;
@@ -952,33 +622,25 @@ function update(dt) {
     const p = state.player;
 
     const playerIsoPos = worldToIso(p.x, p.y);
-    // 1. Tính toán tọa độ Isometric thực tế của chuột trên Canvas
     const mouseIsoX = input.mouseX - (canvas.width / 2) + playerIsoPos.x;
     const mouseIsoY = input.mouseY - (canvas.height / 2) + playerIsoPos.y;
-    // 2. Chuyển đổi ngược từ tọa độ chuột Isometric sang tọa độ Thế giới thực phẳng 2D
     const mouseWorld = isoToWorld(mouseIsoX, mouseIsoY);
-    // 3. Tính góc quay nhân vật chính xác tuyệt đối theo trục 2D Logic gốc
     p.angle = Math.atan2(mouseWorld.y - p.y, mouseWorld.x - p.x);
 
     if (p.iFrames > 0) p.iFrames -= dt;
-    handleActions(dt);
+    battle.handleMouseActions(input);
 
     if (p.isDashing) {
         p.dashTime -= dt; p.x += p.dashDir.x * BASE_STATS.dashSpeed * dt; p.y += p.dashDir.y * BASE_STATS.dashSpeed * dt;
         if (p.dashTime <= 0) p.isDashing = false;
     } else {
         let dx = 0, dy = 0;
+        if (input.keys.w) { dx -= 1; dy -= 1; }
+        if (input.keys.s) { dx += 1; dy += 1; }
+        if (input.keys.a) { dx -= 1; dy += 1; }
+        if (input.keys.d) { dx += 1; dy -= 1; }
 
-        if (input.keys.w) { dx -= 1; dy -= 1; } // W: Đi thẳng LÊN trên màn hình
-        if (input.keys.s) { dx += 1; dy += 1; } // S: Đi thẳng XUỐNG dưới màn hình
-        if (input.keys.a) { dx -= 1; dy += 1; } // A: Đi thẳng sang TRÁI màn hình
-        if (input.keys.d) { dx += 1; dy -= 1; } // D: Đi thẳng sang PHẢI màn hình
-
-        if (state.isMining) {
-            dx = 0;
-            dy = 0;
-        }
-
+        if (state.isMining) { dx = 0; dy = 0; }
         if (dx !== 0 || dy !== 0) { const len = Math.hypot(dx, dy); p.x += (dx / len) * p.speed * dt; p.y += (dy / len) * p.speed * dt; }
     }
 
@@ -1001,7 +663,7 @@ function update(dt) {
                     if (!state.selectedClass) promptEl.innerText = "BẤM [E] ĐỂ NHẬN KỲ DUYÊN";
                     else if (state.player.level >= 10 && !state.player.weaponBranch) {
                         promptEl.innerText = "🔥 BẤM [E] ĐỂ ĐỘT PHÁ PHÁP KHÍ 🔥";
-                        promptEl.style.color = "#ffaa00"; // Đổi màu cam cho nổi bật
+                        promptEl.style.color = "#ffaa00";
                     } else {
                         promptEl.innerText = "BẤM [E] ĐỂ TRÒ CHUYỆN";
                         promptEl.style.color = "#fff";
@@ -1023,14 +685,12 @@ function update(dt) {
     const farmMaps = ['forest', 'desert', 'ice', 'ocean', 'volcano'];
     if (farmMaps.includes(state.currentMap)) {
         const mapConfig = MAP_CONFIG[state.currentMap];
-
         const LIMIT = 1560;
         p.x = Math.max(-LIMIT, Math.min(LIMIT, p.x));
         p.y = Math.max(-LIMIT, Math.min(LIMIT, p.y));
 
         const promptEl = document.getElementById('interaction-prompt');
         let canInteract = false;
-
         const distPortal = Math.hypot(p.x - state.mapEnv.portal.x, p.y - state.mapEnv.portal.y);
 
         if (state.canEnterPortal && !state.isInBossMap) {
@@ -1048,9 +708,6 @@ function update(dt) {
             promptEl.innerText = "BẤM [E] ĐỂ VỀ LÀNG"; canInteract = true;
         }
         else {
-            // -------------------------------------------------------------
-            // THÊM: ƯU TIÊN CHECK HIỂN THỊ CHỮ NHẶT ĐỒ BOSS HOẶC PORTAL BOSS TRƯỚC
-            // -------------------------------------------------------------
             let closeDroppedItem = null;
             if (state.droppedItems) {
                 closeDroppedItem = state.droppedItems.find(item => Math.hypot(p.x - item.x, p.y - item.y) < 70);
@@ -1062,14 +719,12 @@ function update(dt) {
             }
 
             if (closeDroppedItem) {
-                // Hiện tên vật phẩm kèm số lượng cụ thể khi player đứng gần
                 promptEl.innerText = `BẤM [E] ĐỂ NHẶT ${closeDroppedItem.item.name.toUpperCase()} X${closeDroppedItem.count}`;
                 canInteract = true;
             } else if (closeReturnPortal) {
                 promptEl.innerText = "BẤM [E] ĐỂ BƯỚC VÀO CỔNG - QUAY VỀ LÀNG";
                 canInteract = true;
             } else {
-                // Nếu không có đồ boss thì hiện hái thảo dược/đào đá như cũ
                 const closeHerb = state.mapEnv.herbs.find(h => Math.hypot(p.x - h.x, p.y - h.y) < 60);
                 const closeOre = state.mapEnv.ores.find(o => Math.hypot(p.x - o.x, p.y - o.y) < 60);
                 if (closeHerb) { promptEl.innerText = `BẤM [E] ĐỂ HÁI ${mapConfig.herb.item.name.toUpperCase()}`; canInteract = true; }
@@ -1080,78 +735,67 @@ function update(dt) {
     }
 
     // ========================================================
-    // LOGIC ĐỒNG HỒ, XUẤT HIỆN CỔNG BOSS & MA TÔN VỰC
+    // LOGIC ĐỒNG HỒ, XUẤT HIỆN CỔNG BOSS & TIẾN TRÌNH MAPS
     // ========================================================
     if (state.currentMap !== 'village') {
         state.playTime += dt;
         const tutorialEl = document.getElementById('boss-goal-tutorial');
-        if (state.currentMap !== 'village') {
-            tutorialEl.style.display = 'block';
-            state.mapTimer += dt;
+        tutorialEl.style.display = 'block';
+        state.mapTimer += dt;
 
-            if (state.isInBossMap) {
-                // 1. ĐANG Ở TRONG PHÓ BẢN YÊU VƯƠNG (LOCK TIME)
-                state.bossLockTimeLeft -= dt;
-                if (state.bossLockTimeLeft <= 0) {
-                    state.bossLockTimeLeft = 0;
-                    alert("⏳ HẾT GIỜ! Yêu Vương quá mạnh, bạn bị đánh văng về làng!");
-                    window.exitToVillage();
-                    return;
-                }
-                const m = Math.floor(state.bossLockTimeLeft / 60);
-                const s = Math.floor(state.bossLockTimeLeft % 60).toString().padStart(2, '0');
-                tutorialEl.innerText = `⚠️ THỜI GIAN SINH TỬ: ${m}:${s}`;
-                tutorialEl.style.color = '#ff3333';
+        if (state.isInBossMap) {
+            state.bossLockTimeLeft -= dt;
+            if (state.bossLockTimeLeft <= 0) {
+                state.bossLockTimeLeft = 0;
+                alert("⏳ HẾT GIỜ! Yêu Vương quá mạnh, bạn bị đánh văng về làng!");
+                window.exitToVillage();
+                return;
+            }
+            const m = Math.floor(state.bossLockTimeLeft / 60);
+            const s = Math.floor(state.bossLockTimeLeft % 60).toString().padStart(2, '0');
+            tutorialEl.innerText = `⚠️ THỜI GIAN SINH TỬ: ${m}:${s}`;
+            tutorialEl.style.color = '#ff3333';
 
-            } else if (state.currentMap === 'dungeon') {
-                // 2. MAP SỰ KIỆN: MA TÔN VỰC (Dungeon Cũ)
-                if (!state.boss) {
-                    const timeLeft = Math.max(0, DUNGEON_BOSS_CONFIG.spawnTime - state.mapTimer);
-                    const m = Math.floor(timeLeft / 60);
-                    const s = Math.floor(timeLeft % 60).toString().padStart(2, '0');
-                    tutorialEl.innerText = `Ma Tôn giá lâm sau: ${m}:${s}`;
-                    tutorialEl.style.color = '#ffaa00';
-                    if (state.mapTimer >= DUNGEON_BOSS_CONFIG.spawnTime) spawnBoss();
-                } else {
-                    tutorialEl.innerText = `⚠️ TIÊU DIỆT MA TÔN! ⚠️`;
-                    tutorialEl.style.color = '#ff3333';
-                }
+        } else if (state.currentMap === 'dungeon') {
+            if (!state.boss) {
+                const timeLeft = Math.max(0, DUNGEON_BOSS_CONFIG.spawnTime - state.mapTimer);
+                const m = Math.floor(timeLeft / 60);
+                const s = Math.floor(timeLeft % 60).toString().padStart(2, '0');
+                tutorialEl.innerText = `Ma Tôn giá lâm sau: ${m}:${s}`;
+                tutorialEl.style.color = '#ffaa00';
+                if (state.mapTimer >= DUNGEON_BOSS_CONFIG.spawnTime) spawnBoss();
             } else {
-                // 3. MAP FARM: ĐẾM GIỜ MỞ CỔNG YÊU VƯƠNG
-                const mapConfig = MAP_CONFIG[state.currentMap];
-                if (mapConfig && mapConfig.portalSpawnTime) {
-                    if (!state.portalSpawned) {
-                        const timeLeft = Math.max(0, mapConfig.portalSpawnTime - state.mapTimer);
-                        if (timeLeft <= 0) {
-                            state.portalSpawned = true;
-
-                            // Tính toán vị trí ngẫu nhiên cách người chơi một khoảng
-                            let targetX = state.player.x + (Math.random() > 0.5 ? 1 : -1) * (300 + Math.random() * 500);
-                            let targetY = state.player.y + (Math.random() > 0.5 ? 1 : -1) * (300 + Math.random() * 500);
-
-                            // GIỚI HẠN (CLAMP): Map rộng 1600, chặn ở mức 1450 để cổng không lọt ra ngoài hàng rào
-                            const PORTAL_LIMIT = 1450;
-                            state.portalPos = {
-                                x: Math.max(-PORTAL_LIMIT, Math.min(PORTAL_LIMIT, targetX)),
-                                y: Math.max(-PORTAL_LIMIT, Math.min(PORTAL_LIMIT, targetY))
-                            };
-                        } else {
-                            const m = Math.floor(timeLeft / 60);
-                            const s = Math.floor(timeLeft % 60).toString().padStart(2, '0');
-                            tutorialEl.innerText = `Cánh cửa dẫn đến yêu vương sẽ xuất hiện sau: ${m}:${s}`;
-                            tutorialEl.style.color = '#ffaa00';
-                        }
-                    } else {
-                        tutorialEl.innerText = `CÁNH CỬA ĐÃ XUẤT HIỆN! TÌM KIẾM 🌀`;
-                        tutorialEl.style.color = '#ff33ff';
-                    }
-                }
+                tutorialEl.innerText = `⚠️ TIÊU DIỆT MA TÔN! ⚠️`;
+                tutorialEl.style.color = '#ff3333';
             }
         } else {
-            tutorialEl.style.display = 'none';
+            const mapConfig = MAP_CONFIG[state.currentMap];
+            if (mapConfig && mapConfig.portalSpawnTime) {
+                if (!state.portalSpawned) {
+                    const timeLeft = Math.max(0, mapConfig.portalSpawnTime - state.mapTimer);
+                    if (timeLeft <= 0) {
+                        state.portalSpawned = true;
+                        let targetX = state.player.x + (Math.random() > 0.5 ? 1 : -1) * (300 + Math.random() * 500);
+                        let targetY = state.player.y + (Math.random() > 0.5 ? 1 : -1) * (300 + Math.random() * 500);
+                        const PORTAL_LIMIT = 1450;
+                        state.portalPos = {
+                            x: Math.max(-PORTAL_LIMIT, Math.min(PORTAL_LIMIT, targetX)),
+                            y: Math.max(-PORTAL_LIMIT, Math.min(PORTAL_LIMIT, targetY))
+                        };
+                    } else {
+                        const m = Math.floor(timeLeft / 60);
+                        const s = Math.floor(timeLeft % 60).toString().padStart(2, '0');
+                        tutorialEl.innerText = `Cánh cửa dẫn đến yêu vương sẽ xuất hiện sau: ${m}:${s}`;
+                        tutorialEl.style.color = '#ffaa00';
+                    }
+                } else {
+                    tutorialEl.innerText = `CÁNH CỬA ĐÃ XUẤT HIỆN! TÌM KIẾM 🌀`;
+                    tutorialEl.style.color = '#ff33ff';
+                }
+            }
         }
 
-        // 4. HIỂN THỊ CÁNH CỬA PORTAL (Bằng HTML DOM để sáng đẹp, không cần đụng Renderer.js)
+        // Cập nhật Vị trí Portal DOM HTML 
         let bossPortalEl = document.getElementById('boss-portal-el');
         if (state.portalSpawned && !state.isInBossMap && state.currentMap !== 'village') {
             if (!bossPortalEl) {
@@ -1159,20 +803,18 @@ function update(dt) {
                 bossPortalEl.id = 'boss-portal-el';
                 bossPortalEl.style.position = 'absolute';
                 bossPortalEl.style.fontSize = '60px';
-                bossPortalEl.style.textShadow = '0 0 20px #ff33ff'; // Tỏa sáng màu tím cực mạnh
+                bossPortalEl.style.textShadow = '0 0 20px #ff33ff';
                 bossPortalEl.style.zIndex = '5';
                 bossPortalEl.innerText = '🌀';
                 document.body.appendChild(bossPortalEl);
             }
             bossPortalEl.style.display = 'block';
-            // Tính toán vị trí Render chuẩn xác so với Camera
             const portalIso = worldToIso(state.portalPos.x, state.portalPos.y);
             const playerIso = worldToIso(state.player.x, state.player.y);
 
             bossPortalEl.style.left = (portalIso.x - playerIso.x + window.innerWidth / 2 - 30) + 'px';
             bossPortalEl.style.top = (portalIso.y - playerIso.y + window.innerHeight / 2 - 30) + 'px';
 
-            // Tính toán khoảng cách để hiện nút [E]
             const dist = Math.hypot(p.x - state.portalPos.x, p.y - state.portalPos.y);
             state.canEnterPortal = dist < 80;
         } else if (bossPortalEl) {
@@ -1180,74 +822,41 @@ function update(dt) {
             state.canEnterPortal = false;
         }
 
-        // ========================================================
-        // LOGIC SPAWN QUÁI (ĐÃ GỘP CHUNG)
-        // ========================================================
+        // Logic Sinh Quái thường (Chỉ sinh quái khi không có Boss)
         state.lastSpawn += dt;
-        if (!state.isInBossMap && !state.boss) { // Không đẻ quái thường khi đang đánh Boss
-            const farmMaps = ['forest', 'desert', 'ice', 'ocean', 'volcano'];
-
+        if (!state.isInBossMap && !state.boss) {
             if (farmMaps.includes(state.currentMap)) {
-                // Map Farm: 3 giây đẻ 1 con
-                if (state.lastSpawn > 3.0) {
-                    spawnMapEnemy();
-                    state.lastSpawn = 0;
-                }
+                if (state.lastSpawn > 3.0) { spawnMapEnemy(); state.lastSpawn = 0; }
             } else if (state.currentMap === 'dungeon') {
-                // Map Ma Tôn: Đẻ nhanh theo ENEMY_STATS.spawnRate
-                if (state.lastSpawn > ENEMY_STATS.spawnRate) {
-                    spawnDungeonEnemy();
-                    state.lastSpawn = 0;
-                }
+                if (state.lastSpawn > ENEMY_STATS.spawnRate) { spawnDungeonEnemy(); state.lastSpawn = 0; }
             }
         }
 
-        if (state.boss) {
-            const b = state.boss; document.getElementById('boss-hp-fill').style.width = (b.hp / b.maxHp * 100) + '%'; document.getElementById('boss-hp-text').innerText = Math.ceil(b.hp) + ' / ' + b.maxHp;
-            if (b.state === 'idle') {
-                const ang = Math.atan2(p.y - b.y, p.x - b.x); b.x += Math.cos(ang) * b.speed * dt; b.y += Math.sin(ang) * b.speed * dt;
-                if (Math.hypot(p.x - b.x, p.y - b.y) < 50) takePlayerDamage(20);
-                b.currentCd -= dt;
-                if (b.currentCd <= 0) {
-                    b.skillType = Math.floor(Math.random() * 3); b.state = b.skillType === 2 ? 'firing' : 'casting'; b.timer = b.skillType === 2 ? 3.0 : 1.5; b.targetX = p.x; b.targetY = p.y;
-                    if (b.skillType === 0) state.vfxs.push({ type: 'bossAOE', x: p.x, y: p.y, life: 1.5, maxLife: 1.5, radius: 150 });
-                    else if (b.skillType === 1) { b.pendingMountains = []; for (let i = 0; i < 20; i++) { const rx = p.x + (Math.random() - 0.5) * 1200, ry = p.y + (Math.random() - 0.5) * 1200; state.vfxs.push({ type: 'mountainWarning', x: rx, y: ry, life: 1.5, maxLife: 1.5, radius: 25 }); b.pendingMountains.push({ x: rx, y: ry }); } }
-                }
-            } else if (b.state === 'casting') {
-                b.timer -= dt;
-                if (b.timer <= 0) {
-                    if (b.skillType === 0) { state.vfxs.push({ type: 'circle', color: 'rgba(255,0,0,0.6)', x: b.targetX, y: b.targetY, radius: 150, life: 0.5, maxLife: 0.5 }); if (Math.hypot(p.x - b.targetX, p.y - b.targetY) <= 150) takePlayerDamage(50); }
-                    else if (b.skillType === 1 && b.pendingMountains) { b.pendingMountains.forEach(pos => state.mountains.push({ x: pos.x, y: pos.y, radius: 25, hp: 40, maxHp: 40 })); b.pendingMountains = []; }
-                    b.state = 'idle'; b.currentCd = 4.0;
-                }
-            } else if (b.state === 'firing') {
-                b.timer -= dt; b.fireTick = (b.fireTick || 0) - dt;
-                if (b.fireTick <= 0) { state.projectiles.push({ x: b.x, y: b.y, vx: Math.cos(Math.atan2(p.y - b.y, p.x - b.x)) * 500, vy: Math.sin(Math.atan2(p.y - b.y, p.x - b.x)) * 500, life: 3.0, type: 'bossOrb', dmg: 20 }); b.fireTick = 0.15; }
-                if (b.timer <= 0) { b.state = 'idle'; b.currentCd = 4.0; }
-            }
-        }
-    }
-
-    // ----- COMMON COMBAT LOGIC -----
-    if (state.currentMap !== 'village') {
+        // ========================================================
+        // CORE COMBAT LOGIC & UPDATE CHỈ SỐ THỰC THỂ
+        // ========================================================
+        
+        // Hồi kĩ năng CD cho người chơi
         for (let k in state.cd) { if (state.cd[k] > 0) { state.cd[k] -= dt; if (state.cd[k] <= 0) state.cd[k] = 0; if (state.selectedClass) ui.updateCd(k, state.cd[k], getSkillCd(k)); } }
 
+        // Cập nhật trạng thái Quái thường
         state.enemies.forEach(e => {
-            window.updateEntityStatusEffects(e, dt);
-
+            battle.updateEntityStatusEffects(e, dt);
             let currentSpeed = e.speed;
-            if (e.effects && e.effects.ice) {
-                currentSpeed = e.speed * 0.75; // Làm chậm đi 25% tốc chạy
-            }
+            if (e.effects && e.effects.ice) currentSpeed = e.speed * 0.75;
 
-            const ang = Math.atan2(p.y - e.y, p.x - e.x); e.x += Math.cos(ang) * e.speed * dt; e.y += Math.sin(ang) * e.speed * dt;
+            const ang = Math.atan2(p.y - e.y, p.x - e.x); 
+            e.x += Math.cos(ang) * currentSpeed * dt; 
+            e.y += Math.sin(ang) * currentSpeed * dt;
+            
             if (e.isTossed > 0) e.isTossed -= dt;
-            if (Math.hypot(p.x - e.x, p.y - e.y) < 30 + e.size / 2) takePlayerDamage(e.damage);
+            if (Math.hypot(p.x - e.x, p.y - e.y) < 30 + e.size / 2) battle.takePlayerDamage(e.damage);
         });
 
+        // ĐIỀU KHIỂN ĐỘC LẬP AI CỦA BOSS (ĐÃ LỌC TRÙNG)
         if (state.boss) {
             const b = state.boss;
-            window.updateEntityStatusEffects(b, dt);
+            battle.updateEntityStatusEffects(b, dt);
 
             ui.setElementDisplay('boss-ui', 'flex');
             document.getElementById('boss-name').innerText = b.name || "MA TÔN";
@@ -1256,7 +865,7 @@ function update(dt) {
 
             if (b.state === 'idle') {
                 const ang = Math.atan2(p.y - b.y, p.x - b.x); b.x += Math.cos(ang) * b.speed * dt; b.y += Math.sin(ang) * b.speed * dt;
-                if (Math.hypot(p.x - b.x, p.y - b.y) < (b.size / 2 + 20)) takePlayerDamage(b.damage || 20); // Dùng dmg config
+                if (Math.hypot(p.x - b.x, p.y - b.y) < (b.size / 2 + 20)) battle.takePlayerDamage(b.damage || 20);
                 b.currentCd -= dt;
                 if (b.currentCd <= 0) {
                     b.skillType = Math.floor(Math.random() * 3); b.state = b.skillType === 2 ? 'firing' : 'casting'; b.timer = b.skillType === 2 ? 3.0 : 1.5; b.targetX = p.x; b.targetY = p.y;
@@ -1266,7 +875,7 @@ function update(dt) {
             } else if (b.state === 'casting') {
                 b.timer -= dt;
                 if (b.timer <= 0) {
-                    if (b.skillType === 0) { state.vfxs.push({ type: 'circle', color: 'rgba(255,0,0,0.6)', x: b.targetX, y: b.targetY, radius: 150, life: 0.5, maxLife: 0.5 }); if (Math.hypot(p.x - b.targetX, p.y - b.targetY) <= 150) takePlayerDamage(b.damage || 50); }
+                    if (b.skillType === 0) { state.vfxs.push({ type: 'circle', color: 'rgba(255,0,0,0.6)', x: b.targetX, y: b.targetY, radius: 150, life: 0.5, maxLife: 0.5 }); if (Math.hypot(p.x - b.targetX, p.y - b.targetY) <= 150) battle.takePlayerDamage(b.damage || 50); }
                     else if (b.skillType === 1 && b.pendingMountains) { b.pendingMountains.forEach(pos => state.mountains.push({ x: pos.x, y: pos.y, radius: 25, hp: 40, maxHp: 40 })); b.pendingMountains = []; }
                     b.state = 'idle'; b.currentCd = 4.0;
                 }
@@ -1279,6 +888,7 @@ function update(dt) {
             ui.setElementDisplay('boss-ui', 'none');
         }
 
+        // Thu gom ngọc EXP hạt nhân hút nam châm
         for (let i = state.xpOrbs.length - 1; i >= 0; i--) {
             let orb = state.xpOrbs[i]; const dist = Math.hypot(p.x - orb.x, p.y - orb.y);
             if (dist < XP_ORB_CONFIG.magnetRadius) {
@@ -1288,30 +898,33 @@ function update(dt) {
         }
         ui.updateXp(p.exp, p.nextLevelExp);
 
+        // Kỹ năng s2 của Kiếm: Sóng chém dồn tích lũy (Pending slashes)
         if (p.pendingSlashes > 0) {
             p.slashTimer -= dt;
             if (p.slashTimer <= 0) {
                 const ang = p.angle + (Math.random() - 0.5) * 0.6;
-                state.projectiles.push({ x: p.x, y: p.y, vx: Math.cos(ang) * 1000, vy: Math.sin(ang) * 1000, life: 2.0, type: 'slashwave', dmg: getSkillDmg('s2'), pierce: true });
+                state.projectiles.push({ x: p.x, y: p.y, vx: Math.cos(ang) * 1000, vy: Math.sin(ang) * 1000, life: 2.0, type: 'slashwave', dmg: battle.getSkillDmg('s2'), pierce: true });
                 p.pendingSlashes--; p.slashTimer = 0.15;
             }
         }
 
+        // Tính toán đạn bay Projectiles va chạm quái vật
         for (let i = state.projectiles.length - 1; i >= 0; i--) {
             let pr = state.projectiles[i]; if (pr.type !== 'expandingRing') { pr.x += pr.vx * dt; pr.y += pr.vy * dt; } pr.life -= dt; let hit = false;
-            if (pr.type === 'bossOrb') { if (Math.hypot(p.x - pr.x, p.y - pr.y) < 20) { takePlayerDamage(pr.dmg); hit = true; } }
+            if (pr.type === 'bossOrb') { if (Math.hypot(p.x - pr.x, p.y - pr.y) < 20) { battle.takePlayerDamage(pr.dmg); hit = true; } }
             else if (pr.type === 'expandingRing') {
                 pr.radius += pr.expansionSpeed * dt;
-                [...state.enemies, state.boss, ...state.mountains].forEach(e => { if (e && e.hp > 0 && Math.hypot(e.x - pr.x, e.y - pr.y) - (e.size || e.radius || 30) / 2 <= pr.radius && !pr.hitList.includes(e)) { applyDamage(e, pr.dmg); pr.hitList.push(e); } });
+                [...state.enemies, state.boss, ...state.mountains].forEach(e => { if (e && e.hp > 0 && Math.hypot(e.x - pr.x, e.y - pr.y) - (e.size || e.radius || 30) / 2 <= pr.radius && !pr.hitList.includes(e)) { battle.applyDamage(e, pr.dmg); pr.hitList.push(e); } });
             } else {
-                [...state.enemies, state.boss, ...state.mountains].forEach(e => { if (e && e.hp > 0 && !hit && Math.hypot(e.x - pr.x, e.y - pr.y) < (e.size || e.radius || 25) + 10) { if (!pr.pierce) hit = true; pr.hitList = pr.hitList || []; if (!pr.hitList.includes(e)) { applyDamage(e, pr.dmg); pr.hitList.push(e); } } });
+                [...state.enemies, state.boss, ...state.mountains].forEach(e => { if (e && e.hp > 0 && !hit && Math.hypot(e.x - pr.x, e.y - pr.y) < (e.size || e.radius || 25) + 10) { if (!pr.pierce) hit = true; pr.hitList = pr.hitList || []; if (!pr.hitList.includes(e)) { battle.applyDamage(e, pr.dmg); pr.hitList.push(e); } } });
             }
             if (pr.life <= 0 || hit) state.projectiles.splice(i, 1);
         }
 
-        for (let i = state.arrowRains.length - 1; i >= 0; i--) { let r = state.arrowRains[i]; r.life -= dt; r.tick -= dt; if (r.tick <= 0) { [...state.enemies, state.boss, ...state.mountains].forEach(e => { if (e && Math.hypot(e.x - r.x, e.y - r.y) < 150) applyDamage(e, r.dmg); }); state.vfxs.push({ type: 'fallingArrow', x: r.x + (Math.random() - 0.5) * 300, y: r.y + (Math.random() - 0.5) * 300, life: 0.3, maxLife: 0.3 }); r.tick = 0.5; } if (r.life <= 0) state.arrowRains.splice(i, 1); }
-        for (let i = state.tornados.length - 1; i >= 0; i--) { let t = state.tornados[i]; t.x += t.vx * dt; t.y += t.vy * dt; t.life -= dt; t.tick -= dt; if (t.tick <= 0) { [...state.enemies, state.boss, ...state.mountains].forEach(e => { if (e && Math.hypot(e.x - t.x, e.y - t.y) < t.radius) { applyDamage(e, t.dmg); e.isTossed = 0.5; } }); t.tick = 0.5; } if (t.life <= 0) state.tornados.splice(i, 1); }
-        state.mountains.forEach(m => { if (Math.hypot(p.x - m.x, p.y - m.y) < m.radius + 15) takePlayerDamage(10); });
+        // Các hiệu ứng kỹ năng S3 diện rộng AoE (Mưa tên, Lốc xoáy, Ngự kiếm phi hành)
+        for (let i = state.arrowRains.length - 1; i >= 0; i--) { let r = state.arrowRains[i]; r.life -= dt; r.tick -= dt; if (r.tick <= 0) { [...state.enemies, state.boss, ...state.mountains].forEach(e => { if (e && Math.hypot(e.x - r.x, e.y - r.y) < 150) battle.applyDamage(e, r.dmg); }); state.vfxs.push({ type: 'fallingArrow', x: r.x + (Math.random() - 0.5) * 300, y: r.y + (Math.random() - 0.5) * 300, life: 0.3, maxLife: 0.3 }); r.tick = 0.5; } if (r.life <= 0) state.arrowRains.splice(i, 1); }
+        for (let i = state.tornados.length - 1; i >= 0; i--) { let t = state.tornados[i]; t.x += t.vx * dt; t.y += t.vy * dt; t.life -= dt; t.tick -= dt; if (t.tick <= 0) { [...state.enemies, state.boss, ...state.mountains].forEach(e => { if (e && Math.hypot(e.x - t.x, e.y - t.y) < t.radius) { battle.applyDamage(e, t.dmg); e.isTossed = 0.5; } }); t.tick = 0.5; } if (t.life <= 0) state.tornados.splice(i, 1); }
+        state.mountains.forEach(m => { if (Math.hypot(p.x - m.x, p.y - m.y) < m.radius + 15) battle.takePlayerDamage(10); });
 
         for (let i = state.flyingSwords.length - 1; i >= 0; i--) {
             let s = state.flyingSwords[i];
@@ -1319,7 +932,7 @@ function update(dt) {
                 const ang = (performance.now() * 0.003) + s.angleOffset; s.x += ((p.x + Math.cos(ang) * 80) - s.x) * 5 * dt; s.y += ((p.y + Math.sin(ang) * 80) - s.y) * 5 * dt; s.angle = ang + Math.PI / 2;
                 if (!s.cd || s.cd <= 0) { let t = null, md = 300;[...state.enemies, state.boss, ...state.mountains].forEach(e => { if (e) { let d = Math.hypot(e.x - p.x, e.y - p.y); if (d < md) { md = d; t = e; } } }); if (t) { s.state = 'attack'; s.target = t; } } else s.cd -= dt;
             } else if (s.state === 'attack') {
-                if (s.target && s.target.hp > 0) { const a = Math.atan2(s.target.y - s.y, s.target.x - s.x); s.x += Math.cos(a) * 800 * dt; s.y += Math.sin(a) * 800 * dt; s.angle = a; if (Math.hypot(s.target.x - s.x, s.target.y - s.y) < 20) { applyDamage(s.target, s.dmg); s.state = 'return'; } } else s.state = 'return';
+                if (s.target && s.target.hp > 0) { const a = Math.atan2(s.target.y - s.y, s.target.x - s.x); s.x += Math.cos(a) * 800 * dt; s.y += Math.sin(a) * 800 * dt; s.angle = a; if (Math.hypot(s.target.x - s.x, s.target.y - s.y) < 20) { battle.applyDamage(s.target, s.dmg); s.state = 'return'; } } else s.state = 'return';
             } else if (s.state === 'return') {
                 const a = Math.atan2((p.y + Math.sin(performance.now() * 0.003 + s.angleOffset) * 80) - s.y, (p.x + Math.cos(performance.now() * 0.003 + s.angleOffset) * 80) - s.x);
                 s.x += Math.cos(a) * 600 * dt; s.y += Math.sin(a) * 600 * dt; s.angle = a; if (Math.hypot((p.x + Math.cos(performance.now() * 0.003 + s.angleOffset) * 80) - s.x, (p.y + Math.sin(performance.now() * 0.003 + s.angleOffset) * 80) - s.y) < 20) { s.state = 'orbit'; s.cd = 0.5; }
@@ -1327,9 +940,9 @@ function update(dt) {
             s.life = state.cd.s3; if (s.life <= 0) state.flyingSwords.splice(i, 1);
         }
 
+        // Cập nhật hiệu ứng hạt chữ nhảy Damage và VFXs bay
         for (let i = state.vfxs.length - 1; i >= 0; i--) {
-            let v = state.vfxs[i];
-            v.life -= dt;
+            let v = state.vfxs[i]; v.life -= dt;
             if (v.type === 'text') {
                 v.y += v.vy * dt;
                 const textIso = worldToIso(v.x, v.y);
@@ -1338,16 +951,8 @@ function update(dt) {
                 v.el.style.top = (textIso.y - camIso.y + window.innerHeight / 2) + 'px';
                 v.el.style.opacity = v.life;
             }
-            if (v.type === 'particle') {
-                v.x += v.vx * dt;
-                v.y += v.vy * dt;
-                v.vx *= 0.9;
-                v.vy *= 0.9;
-            }
-            if (v.life <= 0) {
-                if (v.el) v.el.remove();
-                state.vfxs.splice(i, 1);
-            }
+            if (v.type === 'particle') { v.x += v.vx * dt; v.y += v.vy * dt; v.vx *= 0.9; v.vy *= 0.9; }
+            if (v.life <= 0) { if (v.el) v.el.remove(); state.vfxs.splice(i, 1); }
         }
     }
 }
@@ -1410,6 +1015,8 @@ function checkLevelUp() {
     ui.updateLevel(state.player.level);
     ui.updateHp(state.player.hp, state.player.maxHp);
 }
+
+window.checkLevelUp = checkLevelUp;
 
 // --- SCENE & MENU MANAGEMENT ---
 window.changeScene = function (sceneId) {
