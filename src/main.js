@@ -14,6 +14,7 @@ import {
 import { InputManager } from './systems/InputManager.js';
 import { UIManager } from './systems/UIManager.js';
 import { BattleManager } from './systems/BattleManager.js';
+import { AlchemyManager } from './systems/AlchemyManager.js';
 import { Renderer } from './utils/Renderer.js';
 import { worldToIso, isoToWorld } from './utils/MathHelper.js';
 
@@ -74,6 +75,7 @@ const input = new InputManager();
 const ui = new UIManager();
 const renderer = new Renderer(canvas);
 const battle = new BattleManager(state, ui);
+const alchemy = new AlchemyManager(state, ui);
 
 // =========================================================
 // HỆ THỐNG ĐAN DƯỢC (ALCHEMY RECIPES)
@@ -194,10 +196,14 @@ for (let i = 0; i < 30; i++) {
 input.onEscape = () => {
     if (!state.gameRunning || state.isDead || state.isVictory) return;
 
+    const alchemyOverlay = document.getElementById('alchemy-overlay');
+    const isAlchemyOpen = alchemyOverlay && alchemyOverlay.style.display === 'flex';
+
     if (state.isEquipmentOpen || state.isInventoryOpen || state.isBlacksmithOpen) {
         state.isEquipmentOpen = false;
         state.isInventoryOpen = false;
         state.isBlacksmithOpen = false;
+        if (isAlchemyOpen) alchemy.closeAlchemyPanel();
         updateMenuVisibility();
         return; // Thoát luôn, không chạy xuống lệnh Pause bên dưới
     }
@@ -384,14 +390,25 @@ input.onKeyDownAction = (k) => {
 };
 
 function updateMenuVisibility() {
-    const anyMenuOpen = state.isEquipmentOpen || state.isInventoryOpen;
+    const alchemyOverlay = document.getElementById('alchemy-overlay');
+    const isAlchemyOpen = alchemyOverlay && alchemyOverlay.style.display === 'flex';
+
+    const anyMenuOpen = state.isEquipmentOpen || state.isInventoryOpen || state.isBlacksmithOpen || isAlchemyOpen;
+    
     state.isPaused = anyMenuOpen;
-    ui.setElementDisplay('menu-overlay', anyMenuOpen ? 'flex' : 'none');
+    
+    ui.setElementDisplay('menu-overlay', (state.isEquipmentOpen || state.isInventoryOpen) ? 'flex' : 'none');
     ui.setElementDisplay('equipment-panel', state.isEquipmentOpen ? 'flex' : 'none');
     ui.setElementDisplay('inventory-panel', state.isInventoryOpen ? 'flex' : 'none');
     ui.setElementDisplay('blacksmith-panel', state.isBlacksmithOpen ? 'flex' : 'none');
+    
     window.updateEquipmentUI();
-    if (!anyMenuOpen) { state.lastTime = performance.now(); requestAnimationFrame(gameLoop); }
+    
+    // ĐOẠN ĐÁNH THỨC VÒNG LẶP CHÍ MẠNG
+    if (!anyMenuOpen) { 
+        state.lastTime = performance.now(); 
+        requestAnimationFrame(gameLoop); 
+    }
 }
 
 const getSkillCd = (k) => k === 'lmb' ? WEAPONS[state.selectedClass].skills[k].cd / state.player.attackSpeed : WEAPONS[state.selectedClass].skills[k].cd * BASE_STATS.cdr;
@@ -2005,202 +2022,11 @@ window.enterBossMap = () => {
 
 
 // ================= HỆ THỐNG LUYỆN ĐAN =================
-let alchemyInterval = null;
-
-window.openAlchemyPanel = () => {
-    document.getElementById('alchemy-overlay').style.display = 'flex';
-
-    const listEl = document.getElementById('alchemy-list');
-    listEl.innerHTML = '';
-
-    for (let key in ALCHEMY_RECIPES) {
-        const item = ALCHEMY_RECIPES[key];
-
-        let reqStr = '';
-        let canCraft = true;
-        item.req.forEach(r => {
-            const invItem = state.inventory.find(i => i.id === r.id);
-            const count = invItem ? invItem.count : 0;
-            if (count < r.count) canCraft = false;
-
-            // 👇 Tìm thông tin gốc của vật phẩm từ kho ITEMS
-            const baseItem = Object.values(ITEMS).find(i => i.id === r.id) || { name: r.id, icon: '❓' };
-
-            reqStr += `<div style="font-size: 12px;">${baseItem.icon} ${baseItem.name}: <span style="color: ${count >= r.count ? '#55ff55' : '#ff5555'}">${count}/${r.count}</span></div>`;
-        });
-
-        // Disable nút nếu Lò đang bận
-        const isFurnaceBusy = state.alchemy && state.alchemy.activeId !== null;
-        const btnState = (canCraft && !isFurnaceBusy) ? 'auto' : 'none';
-        const btnColor = (canCraft && !isFurnaceBusy) ? '#55ff55' : '#555';
-
-        listEl.innerHTML += `
-            <div style="background: rgba(0,0,0,0.6); border: 1px solid #335533; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; justify-content: space-between;">
-                <div style="display: flex; gap: 10px; align-items: center; border-bottom: 1px dashed #335533; padding-bottom: 5px; margin-bottom: 5px;">
-                    <span style="font-size: 30px;">${item.icon}</span>
-                    <div>
-                        <div style="color: #55ff55; font-weight: bold; font-size: 14px;">${item.name}</div>
-                        <div style="color: #aaa; font-size: 11px;">⏱️ ${item.time}s</div>
-                    </div>
-                </div>
-                <div style="font-size: 11px; color: #888; margin-bottom: 5px;">${item.desc}</div>
-                <div style="margin-bottom: 10px;">${reqStr}</div>
-                <button class="btn" style="padding: 5px; font-size: 12px; pointer-events: ${btnState}; border-color: ${btnColor}; color: ${btnColor};" onclick="window.startAlchemy('${key}')">
-                    🔥 LUYỆN ĐAN
-                </button>
-            </div>
-        `;
-    }
-
-    window.updateFurnaceUI();
-    if (alchemyInterval) clearInterval(alchemyInterval);
-    alchemyInterval = setInterval(window.updateFurnaceUI, 1000);
-};
-
-window.closeAlchemyPanel = () => {
-    document.getElementById('alchemy-overlay').style.display = 'none';
-    state.isPaused = false;
-    state.lastTime = performance.now();
-    requestAnimationFrame(gameLoop);
-};
-
-window.startAlchemy = (key) => {
-    const item = ALCHEMY_RECIPES[key];
-
-    // 1. Trừ nguyên liệu
-    item.req.forEach(r => {
-        const invItem = state.inventory.find(i => i.id === r.id);
-        if (invItem) invItem.count -= r.count;
-    });
-
-    // ==========================================
-    // ĐÃ FIX: Dọn dẹp túi đồ an toàn và chính xác
-    // ==========================================
-    state.inventory = state.inventory.filter(i => i.count !== 0);
-
-    if (!state.inventory) state.inventory = []; // Tránh lỗi
-
-    // 2. Kích hoạt Lò
-    const now = Date.now();
-    state.alchemy = {
-        activeId: key,
-        startTime: now,
-        endTime: now + (item.time * 1000),
-        isFinished: false
-    };
-
-    window.updateInventoryUI();
-    window.openAlchemyPanel(); // Refresh lại nút bấm
-};
-
-window.updateFurnaceUI = () => {
-    const visual = document.getElementById('furnace-visual');
-    const status = document.getElementById('furnace-status');
-    const nameEl = document.getElementById('furnace-item-name');
-    const progBg = document.getElementById('furnace-progress-bg');
-    const progBar = document.getElementById('furnace-progress-bar');
-    const timeLeft = document.getElementById('furnace-time-left');
-    const btnCollect = document.getElementById('furnace-collect-btn');
-    const fireBg = document.getElementById('furnace-fire-bg');
-    const container = document.getElementById('furnace-container');
-
-    // Bơm CSS keyframes vào game để làm hiệu ứng chớp nháy (Aura)
-    if (!document.getElementById('alchemy-styles')) {
-        const style = document.createElement('style');
-        style.id = 'alchemy-styles';
-        style.innerHTML = `
-            @keyframes auraBlink {
-                0% { filter: drop-shadow(0 0 10px #55ff55) drop-shadow(0 0 20px #fff); transform: scale(1.1) translateY(0); }
-                50% { filter: drop-shadow(0 0 30px #55ff55) drop-shadow(0 0 60px #fff); transform: scale(1.2) translateY(-5px); }
-                100% { filter: drop-shadow(0 0 10px #55ff55) drop-shadow(0 0 20px #fff); transform: scale(1.1) translateY(0); }
-            }
-            @keyframes furnaceRumble {
-                0% { transform: translate(0, 0) scale(1); }
-                25% { transform: translate(2px, -2px) scale(1.02); }
-                50% { transform: translate(-2px, 2px) scale(0.98); }
-                75% { transform: translate(-2px, -2px) scale(1.01); }
-                100% { transform: translate(2px, 2px) scale(1); }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
-    if (!state.alchemy || !state.alchemy.activeId) {
-        visual.innerText = '🏺';
-        visual.style.animation = 'none';
-        visual.style.transform = 'scale(1)';
-        visual.style.filter = 'drop-shadow(0 0 10px #ffaa00)';
-        status.innerText = 'LÒ ĐANG TRỐNG'; status.style.color = '#777';
-        nameEl.innerText = ''; progBg.style.display = 'none'; btnCollect.style.display = 'none';
-
-        fireBg.style.height = '0%';
-        fireBg.style.background = 'linear-gradient(0deg, rgba(255,60,0,0.6) 0%, rgba(255,170,0,0) 100%)';
-        container.style.borderColor = '#335533';
-        container.style.boxShadow = 'none';
-        return;
-    }
-
-    const item = ALCHEMY_RECIPES[state.alchemy.activeId];
-    nameEl.innerText = `${item.icon} ${item.name}`;
-
-    if (state.alchemy.isFinished || Date.now() >= state.alchemy.endTime) {
-        // ================= LUYỆN XONG (BLINK BLINK) =================
-        state.alchemy.isFinished = true;
-
-        visual.innerText = item.icon; // Đổi icon cái Lò thành Icon của Đan Dược
-        visual.style.animation = 'auraBlink 1.5s infinite ease-in-out'; // Chớp nháy lấp lánh và bay lơ lửng
-
-        status.innerText = 'ĐAN DƯỢC ĐÃ THÀNH!'; status.style.color = '#55ff55';
-        progBg.style.display = 'none'; btnCollect.style.display = 'block';
-
-        // Background biến thành ánh hào quang tỏa tròn
-        fireBg.style.height = '100%';
-        fireBg.style.background = 'radial-gradient(circle, rgba(85,255,85,0.4) 0%, rgba(0,0,0,0) 70%)';
-        container.style.borderColor = '#55ff55';
-        container.style.boxShadow = 'inset 0 0 40px rgba(85,255,85,0.3)';
-    } else {
-        // ================= ĐANG LUYỆN (LỬA BẬP BÙNG) =================
-        visual.innerText = '🏺';
-        visual.style.animation = 'furnaceRumble 0.3s infinite'; // Lò rung lắc liên tục
-        visual.style.filter = 'drop-shadow(0 0 15px #ffaa00)';
-
-        status.innerText = 'ĐANG VẬN CHÂN HỎA...'; status.style.color = '#ffaa00';
-        progBg.style.display = 'block'; btnCollect.style.display = 'none';
-
-        fireBg.style.height = '60%';
-        fireBg.style.background = 'linear-gradient(0deg, rgba(255,60,0,0.6) 0%, rgba(255,170,0,0) 100%)';
-        container.style.borderColor = '#ff5500';
-        container.style.boxShadow = 'inset 0 0 30px rgba(255,85,0,0.2)';
-
-        const totalTime = state.alchemy.endTime - state.alchemy.startTime;
-        const passedTime = Date.now() - state.alchemy.startTime;
-        const percent = Math.min(100, (passedTime / totalTime) * 100);
-        const secLeft = Math.ceil((state.alchemy.endTime - Date.now()) / 1000);
-
-        progBar.style.width = `${percent}%`;
-        timeLeft.innerText = `${secLeft}s`;
-    }
-};
-
-window.collectAlchemy = () => {
-    if (state.inventory.length >= 40) {
-        alert("❌ Túi đồ đã đầy! Vui lòng dọn dẹp trước khi lấy thuốc.");
-        return;
-    }
-
-    const item = ALCHEMY_RECIPES[state.alchemy.activeId];
-
-    // Check xem có đồ chưa, có thì cộng dồn
-    const existing = state.inventory.find(i => i.id === item.id);
-    if (existing) existing.count++;
-    else state.inventory.push({ ...item, count: 1 });
-
-    // Reset Lò
-    state.alchemy = { activeId: null, startTime: 0, endTime: 0, isFinished: false };
-
-    window.updateInventoryUI();
-    window.openAlchemyPanel();
-};
+window.openAlchemyPanel = () => alchemy.openAlchemyPanel();
+window.closeAlchemyPanel = () => alchemy.closeAlchemyPanel();
+window.startAlchemy = (key) => alchemy.startAlchemy(key);
+window.updateFurnaceUI = () => alchemy.updateFurnaceUI();
+window.collectAlchemy = () => alchemy.collectAlchemy();
 
 window.closeTeleportMap = () => { document.getElementById('teleport-map').style.display = 'none'; state.isPaused = false; state.lastTime = performance.now(); requestAnimationFrame(gameLoop); };
 window.resumeGame = () => { state.isPaused = false; ui.toggleScreen('blocker', false); state.lastTime = performance.now(); requestAnimationFrame(gameLoop); };
@@ -2461,15 +2287,22 @@ window.cheatWeaponTier = (amount) => {
 
 // Gán phím tắt F2 để mở bảng Cheat
 window.addEventListener('keydown', (e) => {
-    if (e.key === 'v' || e.key === 'V') {
+    if (e.code === 'KeyV') {
+        if (!state.gameRunning || state.isDead || state.isVictory) return;
+        
         const overlay = document.getElementById('alchemy-overlay');
-        if (overlay.style.display === 'none' || overlay.style.display === '') {
-            if (!state.isPaused) {
-                state.isPaused = true;
-                window.openAlchemyPanel();
-            }
+        const isCurrentlyClosed = !overlay || overlay.style.display === 'none' || overlay.style.display === '';
+
+        if (isCurrentlyClosed) {
+            state.isEquipmentOpen = false;
+            state.isInventoryOpen = false;
+            state.isBlacksmithOpen = false;
+            
+            alchemy.openAlchemyPanel();
+            state.isPaused = true;
         } else {
-            window.closeAlchemyPanel();
+            alchemy.closeAlchemyPanel();
+            updateMenuVisibility(); 
         }
     }
 

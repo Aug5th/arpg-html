@@ -411,3 +411,46 @@ export const BOSS_CONFIG = {
         ]
     }
 };
+
+export const ALCHEMY_RECIPES = {
+    'heal_1': {
+        id: 'heal_1', name: 'Hồi Huyết Đan', icon: '🧪', type: 'healing', healHp: 500, time: 10,
+        desc: 'Hồi 500 HP. Dược liệu cơ bản.',
+        req: [{ id: 'herb', count: 5 }]
+    },
+    'heal_2': {
+        id: 'heal_2', name: 'Đại Phục Đan', icon: '🍷', type: 'healing', healHp: 2000, time: 30,
+        desc: 'Hồi 2.000 HP. Dược liệu sa mạc.',
+        req: [{ id: 'cactus', count: 10 }, { id: 'snake_venom', count: 2 }]
+    },
+    'heal_3': {
+        id: 'heal_3', name: 'Tuyết Liên Đan', icon: '🧊', type: 'healing', healHp: 5000, time: 60,
+        desc: 'Hồi 5.000 HP. Dược liệu băng giá.',
+        req: [{ id: 'snow_lotus', count: 15 }, { id: 'yeti_fur', count: 3 }]
+    },
+    'pill_trucco': {
+        id: 'pill_trucco', name: 'Trúc Cơ Đan', icon: '💊', type: 'breakthrough', targetLv: 9, time: 60,
+        desc: 'Đột phá Trúc Cơ Kỳ (Lv.10).',
+        req: [{ id: 'herb', count: 20 }, { id: 'boar_tusk', count: 10 }, { id: 'boar_king_core', count: 1 }]
+    },
+    'pill_kimdan': {
+        id: 'pill_kimdan', name: 'Ngưng Kim Đan', icon: '🟡', type: 'breakthrough', targetLv: 19, time: 120,
+        desc: 'Đột phá Kim Đan Kỳ (Lv.20).',
+        req: [{ id: 'cactus', count: 30 }, { id: 'scorpion_tail', count: 15 }, { id: 'scorpion_king_core', count: 1 }]
+    },
+    'pill_nguyenanh': {
+        id: 'pill_nguyenanh', name: 'Kết Anh Đan', icon: '🔮', type: 'breakthrough', targetLv: 29, time: 300,
+        desc: 'Đột phá Nguyên Anh Kỳ (Lv.30).',
+        req: [{ id: 'snow_lotus', count: 40 }, { id: 'ice_bear_claw', count: 20 }, { id: 'frost_ape_core', count: 1 }]
+    },
+    'pill_hoathan': {
+        id: 'pill_hoathan', name: 'Tạo Hóa Đan', icon: '🪷', type: 'breakthrough', targetLv: 39, time: 600,
+        desc: 'Đột phá Hóa Thần Kỳ (Lv.40).',
+        req: [{ id: 'seaweed', count: 50 }, { id: 'shark_fin', count: 25 }, { id: 'flood_dragon_core', count: 1 }]
+    },
+    'pill_luyenhu': {
+        id: 'pill_luyenhu', name: 'Hư Không Đan', icon: '🔥', type: 'breakthrough', targetLv: 49, time: 1200,
+        desc: 'Đột phá Luyện Hư Kỳ (Lv.50).',
+        req: [{ id: 'fire_flower', count: 80 }, { id: 'demon_horn', count: 40 }, { id: 'demon_lord_core', count: 1 }]
+    }
+};
